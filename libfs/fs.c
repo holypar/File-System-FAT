@@ -8,6 +8,19 @@
 #include "fs.h"
 
 /* TODO: Phase 1 */
+// 1 byte = 8 bits
+struct superblock { 
+        uint64_t signature[8]; //gotta check this 
+        u_int16_t totalVirtualDiskBlocks;
+        u_int16_t rootBlockIndex;
+        u_int16_t dataBlockStartIndex;
+        u_int16_t amountDataBlocks; 
+        u_int8_t fatBlocks;
+        u_int8_t padding[4079];  // check this too!
+
+};
+
+
 
 int fs_mount(const char *diskname)
 {
