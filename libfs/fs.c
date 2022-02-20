@@ -26,6 +26,10 @@ struct rootdir {
 	uint8_t padding[10];
 };
 
+<<<<<<< HEAD
+=======
+// 
+>>>>>>> 77c300424b3e05ae791f4755ebe0778868d48a56
 int fs_mount(const char *diskname)
 {
         /* TODO: Phase 1 */
