@@ -10,31 +10,42 @@
 /* TODO: Phase 1 */
 // 1 byte = 8 bits
 struct superblock { 
-        uint64_t signature[8]; //gotta check this 
-        u_int16_t totalVirtualDiskBlocks;
-        u_int16_t rootBlockIndex;
-        u_int16_t dataBlockStartIndex;
-        u_int16_t amountDataBlocks; 
-        u_int8_t fatBlocks;
-        u_int8_t padding[4079];  // check this too!
-
+	uint64_t signature[8]; //gotta check this 
+	u_int16_t totalVirtualDiskBlocks;
+	u_int16_t rootBlockIndex;
+	u_int16_t dataBlockStartIndex;
+	u_int16_t amountDataBlocks; 
+	u_int8_t fatBlocks;
+	u_int8_t padding[4079];  // check this too! 
 };
 
-
+struct rootdir {
+	char filename[16]; 
+	uint32_t sizeFile;
+	uint16_t indexDataBlock;
+	uint8_t padding[10];
+};
 
 int fs_mount(const char *diskname)
 {
         /* TODO: Phase 1 */
+		// Steps: 
+			// 1.) Open Virtual Disk using API Block
+			// 2.) Load the Meta-Info to handle file operations
+			// 3.) Need to add Error Checking 
 }
 
 int fs_umount(void)
 {
         /* TODO: Phase 1 */
+		// Steps: 
+			// 1.) Virtual Disk is properly closed
+			// 2.) Internal Data Structures of FS layer are cleaned
 }
 
 int fs_info(void)
 {
-        /* TODO: Phase 1 */
+        /* TODO: Phase 1 Part 2*/
 }
 
 int fs_create(const char *filename)
