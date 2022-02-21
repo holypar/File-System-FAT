@@ -7,25 +7,38 @@
 #include "disk.h"
 #include "fs.h"
 
+#define BLOCK_SIZE 4096
+#define FAT_EOC 0xFFFF
+
+
 /* TODO: Phase 1 */
-// 1 byte = 8 bits
-struct superblock { 
-	uint64_t signature; //gotta check this 
-	u_int16_t totalVirtualDiskBlocks;
-	u_int16_t rootBlockIndex;
-	u_int16_t dataBlockStartIndex;
-	u_int16_t amountDataBlocks; 
-	u_int8_t fatBlocks;
-	u_int8_t padding[4079];  // check this too! 
+struct __attribute__((packed)) superblock { 
+	uint64_t signature; 
+	uint16_t totalVirtualDiskBlocks;
+	uint16_t rootBlockIndex;
+	uint16_t dataBlockStartIndex;
+	uint16_t amountDataBlocks; 
+	uint8_t fatBlocks;
+	uint8_t padding[4079]; 
 };
 
-struct rootdir {
-	char filename[16]; 
+struct __attribute__((packed)) rootdir {
+	char filename[16]; //u_int8 filename[16] ?
 	uint32_t sizeFile;
 	uint16_t indexDataBlock;
 	uint8_t padding[10];
 };
 
+
+/*
+	big array of 16 bit entries : linked list of data blocks composing a file:
+	2048 entries per fat block
+	spans multiple blocks if more than 2048 data blocks to manage. 
+*/
+struct __attribute__((packed)) fat {
+	pass;
+	// not sure if this a 16bit ptr or uint16_t fat[2048]
+};
 
 
 int fs_mount(const char *diskname)
