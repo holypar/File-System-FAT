@@ -38,16 +38,22 @@ struct __attribute__((packed)) rootdir {
 struct __attribute__((packed)) fat {
 	pass;
 	// not sure if this a 16bit ptr or uint16_t fat[2048]
+	// need to take a look later
 };
 
 
 int fs_mount(const char *diskname)
 {
+	int open_disk;
+	// im guessing we have to use open() ?
+
         /* TODO: Phase 1 */
 		// Steps: 
 			// 1.) Open Virtual Disk using API Block
 			// 2.) Load the Meta-Info to handle file operations
 			// 3.) Need to add Error Checking 
+
+	return 0;
 }
 
 int fs_umount(void)
