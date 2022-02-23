@@ -23,12 +23,13 @@ struct __attribute__((packed)) superblock {
 };
 
 struct __attribute__((packed)) rootdir {
-	u_int8_t filename[16]; //u_int8 filename[16] ?
+	u_int8_t filename[16];
 	uint32_t sizeFile;
 	uint16_t indexDataBlock;
 	uint8_t padding[10];
 };
 
+struct superblock super_block;
 
 /*
 	big array of 16 bit entries : linked list of data blocks composing a file:
@@ -47,16 +48,26 @@ int fs_mount(const char *diskname)
         /* TODO: Phase 1 */
 		// Steps: 
 			// 1.) Open Virtual Disk using API Block
-			// 2.) Load the Meta-Info to handle file operations
+			// 2.) Load/Read the Meta-Info to handle file operations
 			// 3.) Need to add Error Checking 
 
 	// 1.) Open Disk + Error Handling
-	int open_disk;
+	int open_disk, read_disk, disk_size;
 	open_disk = block_disk_open(diskname);
 	if (open_disk == -1){
 		//printf("Disk cannot open"); // Error checking for when testing
 		return -1;
 	}
+
+	// reads in opened disk and reads block 0 -> store in superblock struct
+	read_disk = block_read(0, &super_block);
+	if (read_disk == -1){
+		return -1;
+	}
+	
+	//FAT Block Next??? Obtain Disk size??
+	disk_size = block_disk_count();
+
 
 
 
@@ -69,7 +80,7 @@ int fs_umount(void)
 		// Steps: 
 			// 1.) Virtual Disk is properly closed
 			// 2.) Internal Data Structures of FS layer are cleaned
-
+	//
 	int close_disk;
 	close_disk = block_disk_close();
 	if(close_disk == -1){
