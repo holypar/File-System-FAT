@@ -29,15 +29,15 @@ struct __attribute__((packed)) rootdir {
 	uint8_t padding[10];
 };
 
-struct __attribute__((packed)) filedes {
-	uint16_t file_offset;
-};
+// struct __attribute__((packed)) filedes {
+// 	uint16_t file_offset;
+// };
 
 struct superblock super_block;
 struct rootdir root_dir;
-struct filedes file_des;
-//uint16_t *fatTable;
-uint16_t fatTable[2048];
+//struct filedes file_des;
+uint16_t *fatTable;
+
 
 
 int fs_mount(const char *diskname)
@@ -78,11 +78,11 @@ int fs_mount(const char *diskname)
 	if (super_block.totalVirtualDiskBlocks != disk_size){
 		return -1;
 	}
-
-	// 
-	// fatTable = malloc(BLOCK_SIZE*sizeof(uint16_t));
+ 
+ 
+	fatTable = malloc(BLOCK_SIZE*sizeof(uint16_t));
 	// Fat:
-		// Allocate memory into our array??
+		// Allocate memory into our pointer array??
 		// Create a loop to insert info into Fat Table???
 		// Add fat error handling?
 
@@ -92,24 +92,13 @@ int fs_mount(const char *diskname)
 		return -1;
 	}
 
-	return 0;
-
 
 	for (int i = 0; i < super_block.fatBlocks; i++) {
 		block_read(i, &fatTable); //&fatTable[BLOCK_SIZE]);
 	}
 
- /*
-	We open the disk, read all information of the filesystem into the superblock
-	1) read into root
-	2) fill datablocks which are in our FAT struct
-
-				 */
-
+	return 0;
 }
-
-
-
 
 int fs_umount(void)
 {
@@ -128,7 +117,8 @@ int fs_umount(void)
 		return -1;
 	}
 
-	// 
+	// Fat here??? 
+	// free(???)/clean Fat Table???
 
 	close_disk = block_disk_close();
 	if(close_disk == -1){
@@ -139,9 +129,19 @@ int fs_umount(void)
 
 int fs_info(void)
 {
+	/* TODO: Phase 1 Part 2*/
 	// if file was not opened return -1;
 	
-        /* TODO: Phase 1 Part 2*/
+	// Returning SuperBlock Information about ECS150-FS
+	printf("FS Information\n");
+	printf("Signature%s\n", super_block.signature);
+	printf("Total block count%d\n", super_block.totalVirtualDiskBlocks);
+	printf("Total FAT block count%d\n", super_block.fatBlocks);
+	printf("Total Data block count%d", super_block.amountDataBlocks);
+	printf("Root Block Index%d\n", super_block.rootBlockIndex);
+	printf("Data Blocks starting Index%d\n", super_block.dataBlockStartIndex);
+	
+	return 0;
 }
 
 int fs_create(const char *filename)
