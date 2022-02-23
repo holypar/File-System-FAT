@@ -89,10 +89,10 @@ int fs_mount(const char *diskname)
 		// Add fat error handling?
 	
 	for (int i = 0; i < super_block.fatBlocks; i++) {
-		block_read(i, &fatTable); //&fatTable[BLOCK_SIZE]);
+		if (block_read(i, &fatTable) == -1){
+			return -1;
+		} //&fatTable[BLOCK_SIZE]);
 	}
-
-
 
 // read into the root directory + Error Handling if fails
 	if (block_read(super_block.rootBlockIndex, &root_dir) == -1) {
@@ -112,13 +112,21 @@ int fs_umount(void)
 	// "This means that whenever fs_umount() is called, all meta-information and 
 	// file data must have been written out to disk."
 	
-	int close_disk, write_block;
+	int close_disk, write_block, write_root;
 
+	// writing out of disk 
 	write_block = block_write(0, &super_block);
 	if (write_block == -1){
 		return -1;
 	}
 
+	// assuming you have to write out to root dir also???
+	write_root = block_write(super_block.rootBlockIndex, &root_dir);
+	if (write_root == -1){
+		return -1;
+	}
+
+	//Stuff to do with fat i think??
 	// Fat here??? 
 	// free(???)/clean Fat Table???
 
