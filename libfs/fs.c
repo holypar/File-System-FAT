@@ -29,18 +29,15 @@ struct __attribute__((packed)) rootdir {
 	uint8_t padding[10];
 };
 
-struct superblock super_block;
-
-/*
-	big array of 16 bit entries : linked list of data blocks composing a file:
-	2048 entries per fat block
-	spans multiple blocks if more than 2048 data blocks to manage. 
-*/
-struct __attribute__((packed)) fat {
-	pass;
-	// not sure if this a 16bit ptr or uint16_t fat[2048]
-	// need to take a look later
+struct __attribute__((packed)) filedes {
+	uint16_t file_offset;
 };
+
+struct superblock super_block;
+struct rootdir root_dir;
+struct filedes file_des;
+//uint16_t *fatTable;
+uint16_t fatTable[2048];
 
 
 int fs_mount(const char *diskname)
@@ -52,36 +49,87 @@ int fs_mount(const char *diskname)
 			// 3.) Need to add Error Checking 
 
 	// 1.) Open Disk + Error Handling
-	int open_disk, read_disk, disk_size;
+	int open_disk, read_disk, disk_size, fat_block;
 	open_disk = block_disk_open(diskname);
 	if (open_disk == -1){
 		//printf("Disk cannot open"); // Error checking for when testing
 		return -1;
 	}
 
+	// 2.) Load Meta-info
 	// reads in opened disk and reads block 0 -> store in superblock struct
 	read_disk = block_read(0, &super_block);
 	if (read_disk == -1){
 		return -1;
-	}
+	}	
 	
 	//FAT Block Next??? Obtain Disk size??
+	// "For example, the signature of the file system should correspond to the 
+	// one defined by the specifications, the total amount of block should correspond to what block_disk_count() returns, etc"
+
+	// Compare if ECS150-FS matches expected file system
+	// Returns 0 if matches, otherwise not a 0 if mis-match
+	if (strcmp("ECS150-FS", super_block.signature) != 0){
+		return -1;
+	}
+
+	// Obtain disk size + Error Handling
 	disk_size = block_disk_count();
+	if (super_block.totalVirtualDiskBlocks != disk_size){
+		return -1;
+	}
+
+	// 
+	// fatTable = malloc(BLOCK_SIZE*sizeof(uint16_t));
+	// Fat:
+		// Allocate memory into our array??
+		// Create a loop to insert info into Fat Table???
+		// Add fat error handling?
 
 
-
+// read into the root directory + Error Handling if fails
+	if (block_read(super_block.rootBlockIndex, &root_dir) == -1) {
+		return -1;
+	}
 
 	return 0;
+
+
+	for (int i = 0; i < super_block.fatBlocks; i++) {
+		block_read(i, &fatTable); //&fatTable[BLOCK_SIZE]);
+	}
+
+ /*
+	We open the disk, read all information of the filesystem into the superblock
+	1) read into root
+	2) fill datablocks which are in our FAT struct
+
+				 */
+
 }
+
+
+
 
 int fs_umount(void)
 {
         /* TODO: Phase 1 */
-		// Steps: 
-			// 1.) Virtual Disk is properly closed
-			// 2.) Internal Data Structures of FS layer are cleaned
-	//
-	int close_disk;
+		// Steps:
+			// 1.) Internal Data Structures of FS layer are cleaned 
+			// 2.) Virtual Disk is properly closed
+
+	// "This means that whenever fs_umount() is called, all meta-information and 
+	// file data must have been written out to disk."
+	
+	int close_disk, write_block;
+
+	write_block = block_write(0, &super_block);
+	if (write_block == -1){
+		return -1;
+	}
+
+	// 
+
 	close_disk = block_disk_close();
 	if(close_disk == -1){
 		//printf("Disk could not be closed");
