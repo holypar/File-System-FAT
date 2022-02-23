@@ -9,6 +9,8 @@
 
 #define BLOCK_SIZE 4096
 #define FAT_EOC 0xFFFF
+#define MAX_ROOT_FILES 128
+#define MAX_FILE_NAME_SIZE 16
 
 
 // Superblock struct
@@ -22,21 +24,27 @@ struct __attribute__((packed)) superblock {
 	uint8_t padding[4079]; 
 };
 
-//rootdir struct
-/*
-	single block 
-	32 byte entry per file
-	128 entries in total
-	*/
-struct __attribute__((packed)) rootdir {
-	uint8_t filename[16];
-	uint32_t sizeFile;
-	uint16_t indexDataBlock;
-	uint8_t padding[10];
+struct __attribute__((packed)) rootDirEntry {
+	uint8_t fileName[MAX_FILE_NAME_SIZE];  //16 bytes
+	uint32_t fileSize;	   // 4 bytes
+	uint16_t indexOfFirstDataBlock; // 2 bytes
+	uint8_t unused[10];     // 10 bytes
+	//total 32 bytes
 };
 
 
+//rootdir struct
+/*
+	is a single block YES
+	32 byte entry per file  CHECKED
+	128 entries in total YES
+	*/
+struct __attribute__((packed)) rootdir {
+	struct rootDirEntry rootEntries[MAX_ROOT_FILES];  //4096 bytes = 1 block
+};
 
+
+//initialize necessary structs
 struct superblock super_block;
 struct rootdir root_dir;
 uint16_t *fatTable;
