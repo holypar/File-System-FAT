@@ -11,7 +11,7 @@
 #define FAT_EOC 0xFFFF
 
 
-/* TODO: Phase 1 */
+// Superblock struct
 struct __attribute__((packed)) superblock { 
 	uint64_t signature; 
 	uint16_t totalVirtualDiskBlocks;
@@ -22,22 +22,24 @@ struct __attribute__((packed)) superblock {
 	uint8_t padding[4079]; 
 };
 
+//rootdir struct
+/*
+	single block 
+	32 byte entry per file
+	128 entries in total
+	*/
 struct __attribute__((packed)) rootdir {
-	u_int8_t filename[16];
+	uint8_t filename[16];
 	uint32_t sizeFile;
 	uint16_t indexDataBlock;
 	uint8_t padding[10];
 };
 
-// struct __attribute__((packed)) filedes {
-// 	uint16_t file_offset;
-// };
+
 
 struct superblock super_block;
 struct rootdir root_dir;
-//struct filedes file_des;
 uint16_t *fatTable;
-
 
 
 int fs_mount(const char *diskname)
@@ -79,22 +81,22 @@ int fs_mount(const char *diskname)
 		return -1;
 	}
  
- 
-	fatTable = malloc(BLOCK_SIZE*sizeof(uint16_t));
+	//the amount fat entries is equal to #ofdatablocks
+	fatTable = malloc(super_block.amountDataBlocks*sizeof(uint16_t));
 	// Fat:
 		// Allocate memory into our pointer array??
 		// Create a loop to insert info into Fat Table???
 		// Add fat error handling?
+	
+	for (int i = 0; i < super_block.fatBlocks; i++) {
+		block_read(i, &fatTable); //&fatTable[BLOCK_SIZE]);
+	}
+
 
 
 // read into the root directory + Error Handling if fails
 	if (block_read(super_block.rootBlockIndex, &root_dir) == -1) {
 		return -1;
-	}
-
-
-	for (int i = 0; i < super_block.fatBlocks; i++) {
-		block_read(i, &fatTable); //&fatTable[BLOCK_SIZE]);
 	}
 
 	return 0;
