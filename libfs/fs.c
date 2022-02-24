@@ -79,7 +79,8 @@ int fs_mount(const char *diskname)
 
 	// Compare if ECS150-FS matches expected file system
 	// Returns 0 if matches, otherwise not a 0 if mis-match
-	if (strcmp("ECS150-FS", super_block.signature) != 0){
+	// About memcmp "Compares the first num bytes of the block of memory pointed by ptr1 to the first num bytes pointed by ptr2, returning zero if they all match"
+	if (memcmp("ECS150-FS", super_block.signature, 8) != 0){ 
 		return -1;
 	}
 
