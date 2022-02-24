@@ -119,9 +119,9 @@ int fs_umount(void)
 	int close_disk, write_block, write_root;
 
 	// Error Handling if no disk exists when reaching umount
-	if(!&super_block){
-		return -1;
-	}
+	//if(!&super_block){
+		//return -1;
+	//}
 
 	// writing out of disk 
 	write_block = block_write(0, &super_block);
@@ -156,8 +156,8 @@ int fs_info(void)
 	// if file was not opened return -1;
 	
 	// Returning SuperBlock Information about ECS150-FS
-	printf("FS Information\n");
-	printf("Signature%s\n", super_block.signature);
+	printf("FS Info:\n");
+	//printf("Signature%s\n", super_block.signature);
 	printf("Total block count%d\n", super_block.totalVirtualDiskBlocks);
 	printf("Total FAT block count%d\n", super_block.fatBlocks);
 	printf("Total Data block count%d", super_block.amountDataBlocks);
