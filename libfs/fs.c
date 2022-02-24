@@ -171,7 +171,7 @@ int fs_info(void)
 	// if file was not opened return -1;
 
 	// ratio portion here
-	// Ratio Idea for 
+	// Ratio Idea for rdir
 	//int root = 0;
 	//for (int i = 0; i < MAX_ROOT_FILES; i++){
 		//if( fileName[i] == 0) // if entry is empty, write into it
