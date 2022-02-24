@@ -15,7 +15,7 @@
 
 // Superblock struct
 struct __attribute__((packed)) superblock { 
-	uint64_t signature; 
+	uint8_t signature[8]; 
 	uint16_t totalVirtualDiskBlocks;
 	uint16_t rootBlockIndex;
 	uint16_t dataBlockStartIndex;
@@ -66,6 +66,8 @@ int fs_mount(const char *diskname)
 		return -1;
 	}
 
+	//printf("Pass 1\n"); // debugging 
+
 	// 2.) Load Meta-info
 	// reads in opened disk and reads block 0 -> store in superblock struct
 	read_disk = block_read(0, &super_block);
@@ -81,13 +83,12 @@ int fs_mount(const char *diskname)
 	// Returns 0 if matches, otherwise not a 0 if mis-match
 	// About memcmp "Compares the first num bytes of the block of memory pointed by ptr1 to the first num bytes pointed by ptr2, returning zero if they all match"
 
-	if (strcmp("ECS150-FS",(char*)super_block.signature) != 0){
+
+
+// do we compare vs ECS150-FS?
+	if (memcmp("ECS150FS" ,super_block.signature, sizeof(super_block.signature)) != 0){ 
 		return -1;
 	}
-
-	//if (memcmp("ECS150-FS" , super_block.signature, 8) != 0){ 
-		//return -1;
-	//}
 
 	// Obtain disk size + Error Handling
 	disk_size = block_disk_count();
@@ -96,14 +97,13 @@ int fs_mount(const char *diskname)
 	}
  
 	//the amount fat entries is equal to #ofdatablocks
-	fatTable = malloc(super_block.amountDataBlocks*sizeof(uint16_t));
-	for(int i = 1; i <= super_block.fatBlocks; i++){
+	//fatTable = malloc(super_block.amountDataBlocks*sizeof(uint16_t));
+	//for(int i = 1; i <= super_block.fatBlocks; i++){
 		// Reading in Fat contents + Error Handling
-		if (block_read(i, &fatTable) == -1){
-			return -1;
-		}
-	}
-
+		//if (block_read(i, &fatTable) == -1){
+		//	return -1;
+		//}
+	//}
 
 // read into the root directory + Error Handling if fails
 	if (block_read(super_block.rootBlockIndex, &root_dir) == -1) {
@@ -139,9 +139,9 @@ int fs_umount(void)
 	}
 
 	// fat writing 
-	for(int i = 1; i < super_block.fatBlocks; i++){
-		block_write(i, &fatTable);
-	}
+	//for(int i = 1; i < super_block.fatBlocks; i++){
+		//block_write(i, &fatTable);
+	//}
 
 	close_disk = block_disk_close();
 	if(close_disk == -1){
@@ -158,15 +158,20 @@ int fs_info(void)
 {
 	/* TODO: Phase 1 Part 2*/
 	// if file was not opened return -1;
+
+	// ratio portion here
+	
 	
 	// Returning SuperBlock Information about ECS150-FS
 	printf("FS Info:\n");
-	//printf("Signature%s\n", super_block.signature);
-	printf("total_blk_count%d\n", super_block.totalVirtualDiskBlocks);
-	printf("fat_blk_count%d\n", super_block.fatBlocks);
-	printf("Total Data block count%d", super_block.amountDataBlocks);
-	printf("Root Block Index%d\n", super_block.rootBlockIndex);
-	printf("Data Blocks starting Index%d\n", super_block.dataBlockStartIndex);
+	printf("Signature %s\n", super_block.signature);
+	printf("total_blk_count=%d\n", super_block.totalVirtualDiskBlocks);
+	printf("fat_blk_count=%d\n", super_block.fatBlocks);
+	printf("rdir_blk=%d\n", super_block.rootBlockIndex);
+	printf("data_blk=%d\n", super_block.dataBlockStartIndex);
+	printf("data_blk_count=%d\n", super_block.amountDataBlocks);
+	//printf("fat_free_ratio=%d\", );
+	//printf("rdir_free_ratio=%d\n", );
 	// need fat free ratio
 	// need rdir free ratio
 	
