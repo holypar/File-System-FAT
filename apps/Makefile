@@ -50,24 +50,24 @@ deps := $(patsubst %.o,%.d,$(objs))
 
 # Rule for libfs.a
 $(libfs): FORCE
-        @echo "MAKE     $@"
-        $(Q)$(MAKE) V=$(V) D=$(D) -C $(FSPATH)
+	@echo "MAKE     $@"
+	$(Q)$(MAKE) V=$(V) D=$(D) -C $(FSPATH)
 
 # Generic rule for linking final applications
 %.x: %.o $(libfs)
-        @echo "LD       $@"
-        $(Q)$(CC) -o $@ $< $(LDFLAGS)
+	@echo "LD       $@"
+	$(Q)$(CC) -o $@ $< $(LDFLAGS)
 
 # Generic rule for compiling objects
 %.o: %.c
-        @echo "CC       $@"
-        $(Q)$(CC) $(CFLAGS) -c -o $@ $<
+	@echo "CC       $@"
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
 
 # Cleaning rule
 clean: FORCE
-        @echo "CLEAN    $(CUR_PWD)"
-        $(Q)$(MAKE) V=$(V) D=$(D) -C $(FSPATH) clean
-        $(Q)rm -rf $(objs) $(deps) $(programs)
+	@echo "CLEAN    $(CUR_PWD)"
+	$(Q)$(MAKE) V=$(V) D=$(D) -C $(FSPATH) clean
+	$(Q)rm -rf $(objs) $(deps) $(programs)
 
 # Keep object files around
 .PRECIOUS: %.o
