@@ -85,8 +85,8 @@ int fs_mount(const char *diskname)
 
 
 
-// do we compare vs ECS150-FS?
-	if (memcmp("ECS150FS" ,super_block.signature, sizeof(super_block.signature)) != 0){ 
+	// do we compare vs ECS150-FS?
+	if (memcmp("ECS150FS",super_block.signature, sizeof(super_block.signature)) != 0){ 
 		return -1;
 	}
 
@@ -96,14 +96,23 @@ int fs_mount(const char *diskname)
 		return -1;
 	}
  
+	// 2048 fat block
 	//the amount fat entries is equal to #ofdatablocks
-	//fatTable = malloc(super_block.amountDataBlocks*sizeof(uint16_t));
-	//for(int i = 1; i <= super_block.fatBlocks; i++){
+	//2048 entries max in each FAT block each entry is 2 bytes. so 4096bytes each block
+	//If one creates a file system with 8192 data blocks, the size of the FAT will be 8192 x 2 = 16384 bytes long, thus spanning 16384 / 4096 = 4 blocks. 
+	fatTable = malloc(super_block.amountDataBlocks*sizeof(uint16_t));
+	//fatTable = (uint16_t*)malloc(super_block.fatBlocks*BLOCK_SIZE*sizeof(uint16_t)); // uint8 x 2 = uint16
+	for(int i = 1; i <= super_block.fatBlocks; i++){
 		// Reading in Fat contents + Error Handling
-		//if (block_read(i, &fatTable) == -1){
-		//	return -1;
-		//}
-	//}
+		if (block_read(i, &fatTable) == -1){
+			return -1;
+		}
+	}
+
+	//the first entry of the fat table has to be FAT_EOC
+	if (fatTable[0] != FAT_EOC){
+		return -1;
+	}
 
 // read into the root directory + Error Handling if fails
 	if (block_read(super_block.rootBlockIndex, &root_dir) == -1) {
@@ -139,9 +148,11 @@ int fs_umount(void)
 	}
 
 	// fat writing 
-	//for(int i = 1; i < super_block.fatBlocks; i++){
-		//block_write(i, &fatTable);
-	//}
+	for(int i = 1; i < super_block.fatBlocks; i++){
+		if (block_write(i, &fatTable) == -1){
+			return -1;
+		};
+	}
 
 	close_disk = block_disk_close();
 	if(close_disk == -1){
@@ -160,7 +171,12 @@ int fs_info(void)
 	// if file was not opened return -1;
 
 	// ratio portion here
-	
+	// Ratio Idea for 
+	//int root = 0;
+	//for (int i = 0; i < MAX_ROOT_FILES; i++){
+		//if( fileName[i] == 0) // if entry is empty, write into it
+			//root = root++; 
+//	}
 	
 	// Returning SuperBlock Information about ECS150-FS
 	printf("FS Info:\n");

@@ -1,26 +1,45 @@
+# For our makefile, we got most of the information from the slides. 
+# Therefore, most of what is seen is similar to the Makefile in apps and similar to the slides from discussion. 
+#I used my make file from Project 2 and altered it a bit to work for this project.
 # Target library
-lib := libfs.a
+target := libfs.a
+objs:= disk.o fs.o 
+# Flags
+CC  := gcc
+CFLAGS := -g -Wall -Wextra -MMD #-Werror 
+AR  := ar rcs 
 
-all: $(lib)
-CC = gcc
-FLAGS = -Wall -Wextra #-Werror
-OBJS = disk.o fs.o
+# Debug Flag
+ifneq ($(D),1)
+CFLAGS	+= -O2
+else
+CFLAGS	+= -g
+endif
 
-deps := $(patsubst %.o, %.d, $(OBJS))
+# Option for showcasing the commands 
+ifneq ($(V),1)
+Q = @
+V = 0
+endif
+
+# To include dependencies  
+deps := $(patsubst %.o,%.d,$(objs))
 -include $(deps)
 
-libfs.a: $(OBJS)
-	ar rcs $@ $^
+# Making to compile the program itself 
+all: $(target)
 
-disk.o: disk.c disk.h
-	$(CC) $(FLAGS) -c -o $@ $<
+# Compiling the library
+$(target): $(objs) 
+	@echo "AR	$@"
+	$(Q)$(AR) $@ $(objs)
 
-fs.o: fs.c fs.h disk.h
-	$(CC) $(FLAGS) -c -o $@ $<
+# Generalized function for creating a object file 
+%.o: %.c
+	@echo "CC	$@"
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
 
-clean:
-	rm -f $(lib) $(OBJS)
+clean: 
+	@echo "clean"
+	$(Q)rm -f $(target) $(objs) $(deps)
 
-
-## TODO: Phase 1
-## To reflect advanced Makefile from Discussion 4 slides
