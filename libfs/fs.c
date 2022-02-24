@@ -92,12 +92,8 @@ int fs_mount(const char *diskname)
  
 	//the amount fat entries is equal to #ofdatablocks
 	fatTable = malloc(super_block.amountDataBlocks*sizeof(uint16_t));
-
-
-
 	for(int i = 1; i <= super_block.fatBlocks; i++){
 		block_read(i, &fatTable);
-	
 	}
 
 
@@ -118,8 +114,14 @@ int fs_umount(void)
 
 	// "This means that whenever fs_umount() is called, all meta-information and 
 	// file data must have been written out to disk."
-	
+	// So, write out to superblock, fat, and root dir.
+
 	int close_disk, write_block, write_root;
+
+	// Error Handling if no disk exists when reaching umount
+	if(!&super_block){
+		return -1;
+	}
 
 	// writing out of disk 
 	write_block = block_write(0, &super_block);
@@ -133,15 +135,19 @@ int fs_umount(void)
 		return -1;
 	}
 
-	//Stuff to do with fat i think??
-	// Fat here??? 
-	// free(???)/clean Fat Table???
+	for(int i = 1; i <= super_block.fatBlocks; i++){
+		block_write(i, &fatTable);
+	}
 
 	close_disk = block_disk_close();
 	if(close_disk == -1){
 		//printf("Disk could not be closed");
 		return -1;
 	}
+	// deallocate memory
+	free(fatTable);
+
+	return 0;
 }
 
 int fs_info(void)
