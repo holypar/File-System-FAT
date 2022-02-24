@@ -158,56 +158,60 @@ int fs_info(void)
 	// Returning SuperBlock Information about ECS150-FS
 	printf("FS Info:\n");
 	//printf("Signature%s\n", super_block.signature);
-	printf("Total block count%d\n", super_block.totalVirtualDiskBlocks);
-	printf("Total FAT block count%d\n", super_block.fatBlocks);
+	printf("total_blk_count%d\n", super_block.totalVirtualDiskBlocks);
+	printf("fat_blk_count%d\n", super_block.fatBlocks);
 	printf("Total Data block count%d", super_block.amountDataBlocks);
 	printf("Root Block Index%d\n", super_block.rootBlockIndex);
 	printf("Data Blocks starting Index%d\n", super_block.dataBlockStartIndex);
+	// need fat free ratio
+	// need rdir free ratio
 	
 	return 0;
 }
 
-int fs_create(const char *filename)
-{
+/* Commenting Sections for Phase 1 Testing */
+
+//int fs_create(const char *filename)
+//{
         /* TODO: Phase 2 */
-}
+//}
 
-int fs_delete(const char *filename)
-{
+//int fs_delete(const char *filename)
+//{
         /* TODO: Phase 2 */
-}
+//}
 
-int fs_ls(void)
-{
+//int fs_ls(void)
+//{
         /* TODO: Phase 2 */
-}
+//}
 
-int fs_open(const char *filename)
-{
+//int fs_open(const char *filename)
+//{
         /* TODO: Phase 3 */
-}
+//}
 
-int fs_close(int fd)
-{
+//int fs_close(int fd)
+//{
         /* TODO: Phase 3 */
-}
+//}
 
-int fs_stat(int fd)
-{
+//int fs_stat(int fd)
+//{
         /* TODO: Phase 3 */
-}
+//}
 
-int fs_lseek(int fd, size_t offset)
-{
+//int fs_lseek(int fd, size_t offset)
+//{
         /* TODO: Phase 3 */
-}
+//}
 
-int fs_write(int fd, void *buf, size_t count)
-{
+//int fs_write(int fd, void *buf, size_t count)
+//{
         /* TODO: Phase 4 */
-}
+//}
 
-int fs_read(int fd, void *buf, size_t count)
-{
+//int fs_read(int fd, void *buf, size_t count)
+//{
         /* TODO: Phase 4 */
-}
+//}
