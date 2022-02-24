@@ -1,0 +1,7 @@
+FS Info:
+Signature ECS150FS 
+total_blk_count=8198
+fat_blk_count=4
+rdir_blk=5
+data_blk=6
+data_blk_count=8192
