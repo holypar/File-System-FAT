@@ -92,16 +92,14 @@ int fs_mount(const char *diskname)
  
 	//the amount fat entries is equal to #ofdatablocks
 	fatTable = malloc(super_block.amountDataBlocks*sizeof(uint16_t));
-	// Fat:
-		// Allocate memory into our pointer array??
-		// Create a loop to insert info into Fat Table???
-		// Add fat error handling?
+
+
+
+	for(int i = 1; i <= super_block.fatBlocks; i++){
+		block_read(i, &fatTable);
 	
-	for (int i = 0; i < super_block.fatBlocks; i++) {
-		if (block_read(i, &fatTable) == -1){
-			return -1;
-		} //&fatTable[BLOCK_SIZE]);
 	}
+
 
 // read into the root directory + Error Handling if fails
 	if (block_read(super_block.rootBlockIndex, &root_dir) == -1) {
