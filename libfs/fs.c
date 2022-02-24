@@ -59,7 +59,7 @@ int fs_mount(const char *diskname)
 			// 3.) Need to add Error Checking 
 
 	// 1.) Open Disk + Error Handling
-	int open_disk, read_disk, disk_size, fat_block;
+	int open_disk, read_disk, disk_size; // fat_block;
 	open_disk = block_disk_open(diskname);
 	if (open_disk == -1){
 		//printf("Disk cannot open"); // Error checking for when testing
@@ -80,9 +80,14 @@ int fs_mount(const char *diskname)
 	// Compare if ECS150-FS matches expected file system
 	// Returns 0 if matches, otherwise not a 0 if mis-match
 	// About memcmp "Compares the first num bytes of the block of memory pointed by ptr1 to the first num bytes pointed by ptr2, returning zero if they all match"
-	if (memcmp("ECS150-FS", super_block.signature, 8) != 0){ 
+
+	if (strcmp("ECS150-FS",(char*)super_block.signature) != 0){
 		return -1;
 	}
+
+	//if (memcmp("ECS150-FS" , super_block.signature, 8) != 0){ 
+		//return -1;
+	//}
 
 	// Obtain disk size + Error Handling
 	disk_size = block_disk_count();
@@ -93,7 +98,10 @@ int fs_mount(const char *diskname)
 	//the amount fat entries is equal to #ofdatablocks
 	fatTable = malloc(super_block.amountDataBlocks*sizeof(uint16_t));
 	for(int i = 1; i <= super_block.fatBlocks; i++){
-		block_read(i, &fatTable);
+		// Reading in Fat contents + Error Handling
+		if (block_read(i, &fatTable) == -1){
+			return -1;
+		}
 	}
 
 
@@ -118,11 +126,6 @@ int fs_umount(void)
 
 	int close_disk, write_block, write_root;
 
-	// Error Handling if no disk exists when reaching umount
-	//if(!&super_block){
-		//return -1;
-	//}
-
 	// writing out of disk 
 	write_block = block_write(0, &super_block);
 	if (write_block == -1){
@@ -135,7 +138,8 @@ int fs_umount(void)
 		return -1;
 	}
 
-	for(int i = 1; i <= super_block.fatBlocks; i++){
+	// fat writing 
+	for(int i = 1; i < super_block.fatBlocks; i++){
 		block_write(i, &fatTable);
 	}
 
@@ -171,47 +175,47 @@ int fs_info(void)
 
 /* Commenting Sections for Phase 1 Testing */
 
-//int fs_create(const char *filename)
-//{
+int fs_create(const char *filename)
+{
         /* TODO: Phase 2 */
-//}
+}
 
-//int fs_delete(const char *filename)
-//{
+int fs_delete(const char *filename)
+{
         /* TODO: Phase 2 */
-//}
+}
 
-//int fs_ls(void)
-//{
+int fs_ls(void)
+{
         /* TODO: Phase 2 */
-//}
+}
 
-//int fs_open(const char *filename)
-//{
+int fs_open(const char *filename)
+{
         /* TODO: Phase 3 */
-//}
+}
 
-//int fs_close(int fd)
-//{
+int fs_close(int fd)
+{
         /* TODO: Phase 3 */
-//}
+}
 
-//int fs_stat(int fd)
-//{
+int fs_stat(int fd)
+{
         /* TODO: Phase 3 */
-//}
+}
 
-//int fs_lseek(int fd, size_t offset)
-//{
+int fs_lseek(int fd, size_t offset)
+{
         /* TODO: Phase 3 */
-//}
+}
 
-//int fs_write(int fd, void *buf, size_t count)
-//{
+int fs_write(int fd, void *buf, size_t count)
+{
         /* TODO: Phase 4 */
-//}
+}
 
-//int fs_read(int fd, void *buf, size_t count)
-//{
+int fs_read(int fd, void *buf, size_t count)
+{
         /* TODO: Phase 4 */
-//}
+}

@@ -3,7 +3,7 @@ lib := libfs.a
 
 all: $(lib)
 CC = gcc
-FLAGS = -Wall -Wextra -Werror
+FLAGS = -Wall -Wextra #-Werror
 OBJS = disk.o fs.o
 
 deps := $(patsubst %.o, %.d, $(OBJS))
