@@ -72,7 +72,7 @@ int fs_mount(const char *diskname)
 
 	// do we compare vs ECS150-FS?
 	if (memcmp("ECS150FS",super_block.signature, sizeof(super_block.signature)) != 0){ 
-		return -1;
+		return -1; 
 	}
 
 	// Obtain disk size + Error Handling
@@ -134,6 +134,7 @@ int fs_umount(void)
 	if(close_disk == -1){
 		return -1;
 	}
+
 	// deallocate memory
 	free(fatTable);
 
@@ -162,7 +163,6 @@ int fs_info(void)
 	}
 	// Returning SuperBlock Information about ECS150-FS
 	printf("FS Info:\n");
-	//printf("Signature %s\n", super_block.signature);
 	printf("total_blk_count=%d\n", super_block.totalVirtualDiskBlocks);
 	printf("fat_blk_count=%d\n", super_block.fatBlocks);
 	printf("rdir_blk=%d\n", super_block.rootBlockIndex);
@@ -178,17 +178,115 @@ int fs_info(void)
 
 int fs_create(const char *filename)
 {
+
+	// Error Handling
+	if(filename == NULL){
+		return -1;
+	}
+	//
+	// 1. you iterate thru the root entires find one that is free, then 
+
+
+	for (int i = 0; i < MAX_ROOT_FILES; i++){
+		if(root_dir[i].fileName[0] == '\0'){ 
+			//char* thefile = filename;
+			strcpy(root_dir[i].fileName,filename);
+			root_dir[i].indexOfFirstDataBlock = FAT_EOC; // First index set to FAT_EOC
+			root_dir[i].fileSize = 0; // Setting size to 0
+		}
+		break;
+	}
         /* TODO: Phase 2 */
+		// from fs.h
+			// "String @filename must be NULL-terminated and its total
+ 			//* length cannot exceed %FS_FILENAME_LEN characters"
+	return 0;
 }
 
 int fs_delete(const char *filename)
 {
+	/*
+		1) find file we are looking for
+		2) save that index access root_dir[index].indexoffirstdatablock
+		3) clear there in the fat table?
+	
+	*/
         /* TODO: Phase 2 */
+	// Error Handling
+	if(filename == NULL){
+		return -1;
+	}
+
+		// check if Fat Block is == FAT_EOC
+		/* Removing a file is the opposite procedure: the file’s 
+		entry must be emptied and all the data blocks containing the file’s 
+		contents must be freed in the FAT.*/
+		//if( ){
+
+		//}
+
+		uint16_t fat_position;
+		// Empty for loop
+		// emptying root_dir array
+		//ask about memcmp vs ==
+		for (int i = 0; i < MAX_ROOT_FILES; i++){
+			// maybe have to use memcmp()
+			if(memcmp(root_dir[i].fileName, filename, sizeof(filename))){
+			
+				// empty file entry
+				// file's contents freed from FAT???
+				// free(root_dir[].
+				//fat_position = i;
+				fat_position = root_dir[i].indexOfFirstDataBlock;
+				 // this is the spot we look for in our fatTable	
+				root_dir[i].fileName[0] = '\0'; // setting filename to NULL? 
+				root_dir[i].fileSize = 0;  //uint32_t
+				root_dir[i].indexOfFirstDataBlock = FAT_EOC; // resets FAT to 0???
+				return 0;
+				//break; 
+			}
+		}
+
+
+		// Free Fat Table contents
+		fatTable[fat_position];
+		uint16_t next_position;
+
+		while(fatTable[fat_position] != FAT_EOC){
+			next_position = fatTable[fat_position]; // save where to go next
+			fatTable[next_position] = 0; //set current data entry to 0
+			fat_position = next_position; // now move to the next pointer
+		}
+		fatTable[fat_position] = 0; // Once at the last spot, make it 0
+
+	// Only need to access Fat Blocks .... not data blocks??
+	// First item, either FAT EOC or a file
+		// Check if FAT EOC or not
+		// Save index and find EOC
+		// Change to 0 
+
+		// FAT_EOC = 0xFFFF 
+		//int fat_block, fat_dataBlock = 0;
+		//while(fat_block != FAT_EOC){
+			//fatTable[fat_dataBlock] = 0;
+			//fat_block = fatTable[fat_dataBlock];
+
+		//}
+	return 0;
 }
 
 int fs_ls(void)
 {
         /* TODO: Phase 2 */
+		// printing out here
+		printf("FS Ls:\n");
+		for (int i=0; i < MAX_FILE_NAME_SIZE; i++){
+			if( root_dir[i].fileName[0] != '\0'){
+				printf("file: %s, size: %d, data_blk: %d\n", root_dir[i].fileName, root_dir[i].fileSize, root_dir[i].indexOfFirstDataBlock);
+			}
+		}
+		
+		return 0; 
 }
 
 int fs_open(const char *filename)
