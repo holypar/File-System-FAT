@@ -12,8 +12,10 @@
 #define MAX_ROOT_FILES 128
 #define MAX_FILE_NAME_SIZE 16
 
-//to do.
-//do both ratios 
+//TO DO:
+	// 1.) Error Handling
+	// 2.) Start Phase 3
+	// 3.) Clean up code
 
 // Superblock struct
 struct __attribute__((packed)) superblock { 
@@ -85,7 +87,6 @@ int fs_mount(const char *diskname)
 	//the amount fat entries is equal to #ofdatablocks
 	//2048 entries max in each FAT block each entry is 2 bytes. so 4096bytes each block
 	//If one creates a file system with 8192 data blocks, the size of the FAT will be 8192 x 2 = 16384 bytes long, thus spanning 16384 / 4096 = 4 blocks. 
-	//fatTable = malloc(super_block.amountDataBlocks*BLOCK_SIZE*sizeof(uint16_t));
 	fatTable = malloc(super_block.fatBlocks*BLOCK_SIZE*sizeof(uint16_t)); // uint8 x 2 = uint16
 	for(int i = 1; i <= super_block.fatBlocks; i++){
 		// Reading in Fat contents + Error Handling
@@ -174,8 +175,6 @@ int fs_info(void)
 	return 0;
 }
 
-/* Commenting Sections for Phase 1 Testing */
-
 int fs_create(const char *filename)
 {
 
@@ -183,9 +182,6 @@ int fs_create(const char *filename)
 	if(filename == NULL){
 		return -1;
 	}
-	//
-	// 1. you iterate thru the root entires find one that is free, then 
-
 
 	for (int i = 0; i < MAX_ROOT_FILES; i++){
 		if(root_dir[i].fileName[0] == '\0'){ 
@@ -277,16 +273,14 @@ int fs_delete(const char *filename)
 
 int fs_ls(void)
 {
-        /* TODO: Phase 2 */
-		// printing out here
-		printf("FS Ls:\n");
-		for (int i=0; i < MAX_FILE_NAME_SIZE; i++){
-			if( root_dir[i].fileName[0] != '\0'){
-				printf("file: %s, size: %d, data_blk: %d\n", root_dir[i].fileName, root_dir[i].fileSize, root_dir[i].indexOfFirstDataBlock);
-			}
+	// Printing LS - Phase 2
+	printf("FS Ls:\n");
+	for (int i=0; i < MAX_FILE_NAME_SIZE; i++){
+		if( root_dir[i].fileName[0] != '\0'){
+			printf("file: %s, size: %d, data_blk: %d\n", root_dir[i].fileName, root_dir[i].fileSize, root_dir[i].indexOfFirstDataBlock);
 		}
-		
-		return 0; 
+	}
+	return 0; 
 }
 
 int fs_open(const char *filename)
