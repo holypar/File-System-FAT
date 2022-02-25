@@ -42,14 +42,17 @@ struct __attribute__((packed)) rootDirEntry {
 	32 byte entry per file  CHECKED
 	128 entries in total YES
 	*/
-struct __attribute__((packed)) rootdir {
-	struct rootDirEntry rootEntries[MAX_ROOT_FILES];  //4096 bytes = 1 block
-};
-
+// struct __attribute__((packed)) rootdir {
+// 	struct rootDirEntry rootEntries[MAX_ROOT_FILES];  //4096 bytes = 1 block
+// };
+// we are reading 1 block of 4096 bytes 
+// but we need it to be in 128 different files of each 32 bytes
 
 //initialize necessary structs
 struct superblock super_block;
-struct rootdir root_dir;
+struct rootDirEntry root_dir[MAX_ROOT_FILES];
+
+
 uint16_t *fatTable;
 
 
@@ -118,6 +121,7 @@ int fs_mount(const char *diskname)
 	}
 
 // read into the root directory + Error Handling if fails
+// 
 	if (block_read(super_block.rootBlockIndex, &root_dir) == -1) {
 		return -1;
 	}
@@ -156,7 +160,7 @@ int fs_umount(void)
 			return -1;
 		};
 	}
-	//starting point of fat table 
+ 
 	close_disk = block_disk_close();
 	if(close_disk == -1){
 		//printf("Disk could not be closed");
@@ -170,17 +174,28 @@ int fs_umount(void)
 
 int fs_info(void)
 {
+
+
+	// Fat Block Ratio
+	
+	//root_dir.rootEntries->fileName[i][0] == "\0";
 	/* TODO: Phase 1 Part 2*/
 	// if file was not opened return -1;
 
 	// ratio portion here
-	// Ratio Idea for rdir
-	//int root = 0;
-	//for (int i = 0; i < MAX_ROOT_FILES; i++){
-		//if( fileName[i] == 0) // if entry is empty, write into it
-			//root = root++; 
-	//}
-	
+	int freeRootEntry = 0;
+	for (int i = 0; i < MAX_ROOT_FILES; i++){
+		if (root_dir[i].fileName == '\0')
+			freeRootEntry++; 
+	}
+
+		
+	int freeFatEntry = 0;
+	for (int i = 0; i < super_block.amountDataBlocks; i++){
+		if (fatTable[i] == 0){
+			freeFatEntry++;
+		}
+	}
 	// Returning SuperBlock Information about ECS150-FS
 	printf("FS Info:\n");
 	printf("Signature %s\n", super_block.signature);
@@ -190,8 +205,15 @@ int fs_info(void)
 	printf("data_blk=%d\n", super_block.dataBlockStartIndex);
 	printf("data_blk_count=%d\n", super_block.amountDataBlocks);
 	//printf("rootblock entries%d\n", root_dir.rootEntries);
-	//printf("fat_free_ratio=%d\", );
-	//printf("rdir_free_ratio=%d\n", );
+	printf("fat_free_ratio=%d/%d\n",freeFatEntry, super_block.amountDataBlocks);
+
+	// for(int i = 0; i < MAX_ROOT_FILES; i++){
+	// 	printf("rdir_files=%s\n",root_dir.rootEntries[i].fileName);
+	// }
+
+
+	//printf("rdir_first_file=%s\n",root_dir.rootEntries[4].fileName[0]);
+	printf("rdir_free_ratio=%d/%d\n",freeRootEntry, MAX_ROOT_FILES);
 	// need fat free ratio
 	// need rdir free ratio
 	
