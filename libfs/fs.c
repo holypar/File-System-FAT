@@ -316,7 +316,6 @@ int fs_close(int fd)
 {
         fdTable.fdEntries[fd].fileName[0] = "\0";
 		fdTable.fdEntries[fd].offset = 0;
-
 }
 
 int fs_stat(int fd)
@@ -335,6 +334,7 @@ int fs_stat(int fd)
 int fs_lseek(int fd, size_t offset)
 {
     fdTable.fdEntries[fd].offset = offset;
+}
 
 int fs_write(int fd, void *buf, size_t count)
 {
