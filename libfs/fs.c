@@ -35,7 +35,7 @@ struct __attribute__((packed)) rootDirEntry {
 	//total 32 bytes
 };
 
-
+// make file name null in mount
 struct __attribute__((packed)) fdEntry {
 	uint8_t fileName[MAX_FILE_NAME_SIZE];
 	uint64_t offset;
@@ -101,6 +101,11 @@ int fs_mount(const char *diskname)
 // read into the root directory + Error Handling if fails
 	if (block_read(super_block.rootBlockIndex, &root_dir) == -1) {
 		return -1;
+	}
+
+
+	for (int i = 0; i < FS_OPEN_MAX_COUNT; i++){
+		memset(fdTable.fdEntries[i].fileName,'\0', MAX_FILE_NAME_SIZE);
 	}
 
 	return 0;
@@ -183,7 +188,7 @@ int fs_create(const char *filename)
 	for (int i = 0; i < MAX_ROOT_FILES; i++){
 		if(root_dir[i].fileName[0] == '\0'){ 
 			//char* thefile = filename;
-			strcpy(root_dir[i].fileName,filename);
+			memcpy(root_dir[i].fileName,filename, FS_FILENAME_LEN);
 			root_dir[i].indexOfFirstDataBlock = FAT_EOC; // First index set to FAT_EOC
 			root_dir[i].fileSize = 0; // Setting size to 0
 			break;
@@ -225,7 +230,7 @@ int fs_delete(const char *filename)
 		//ask about memcmp vs ==
 		for (int i = 0; i < MAX_ROOT_FILES; i++){
 			// maybe have to use memcmp()
-			if(!memcmp(root_dir[i].fileName, filename, sizeof(filename))){
+			if(!memcmp(root_dir[i].fileName, filename, FS_FILENAME_LEN)){
 			
 				// empty file entry
 				// file's contents freed from FAT???
@@ -243,7 +248,6 @@ int fs_delete(const char *filename)
      
 
 		// Free Fat Table contents
-		fatTable[fat_position];
 		uint16_t next_position;
 
 		while(fatTable[fat_position] != FAT_EOC){
@@ -252,20 +256,6 @@ int fs_delete(const char *filename)
 			fat_position = next_position; // now move to the next pointer
 		}
 		fatTable[fat_position] = 0; // Once at the last spot, make it 0
-
-	// Only need to access Fat Blocks .... not data blocks??
-	// First item, either FAT EOC or a file
-		// Check if FAT EOC or not
-		// Save index and find EOC
-		// Change to 0 
-
-		// FAT_EOC = 0xFFFF 
-		//int fat_block, fat_dataBlock = 0;
-		//while(fat_block != FAT_EOC){
-			//fatTable[fat_dataBlock] = 0;
-			//fat_block = fatTable[fat_dataBlock];
-
-		//}
 	return 0;
 }
 
@@ -297,10 +287,11 @@ int fs_open(const char *filename)
 {
 	int returnFD = 0;
 	for (int i = 0; i < MAX_ROOT_FILES; i++){
-		if(!memcmp(root_dir[i].fileName, filename, sizeof(filename))){
+		if(memcmp(root_dir[i].fileName, filename, FS_FILENAME_LEN) == 0){      // these dont work
 			for(i = 0; i < FS_OPEN_MAX_COUNT; i++){
-				if(fdTable.fdEntries[i].fileName[0] == "\0"){
-					memcpy(fdTable.fdEntries[i].fileName, filename, sizeof(filename));
+				// memcmp(fdTable.fdEntries[i].fileName[i], "\0", 1)
+				if((fdTable.fdEntries[i].fileName[0] == '\0')){		// this is not gonna work 
+					memcpy(fdTable.fdEntries[i].fileName, filename, FS_FILENAME_LEN);
 					fdTable.fdEntries[i].offset = 0;
 					returnFD = i;
 					break;
@@ -314,26 +305,29 @@ int fs_open(const char *filename)
 
 int fs_close(int fd)
 {
-        fdTable.fdEntries[fd].fileName[0] = "\0";
+        fdTable.fdEntries[fd].fileName[0] = '\0';
 		fdTable.fdEntries[fd].offset = 0;
+		return 0;
 }
 
 int fs_stat(int fd)
 {
-	int returnFileSize = NULL;
- 	char* fileName =  fdTable.fdEntries[fd].fileName;
+	int returnFileSize = -999;
+ 	
 	for (int i = 0; i < MAX_ROOT_FILES; i++){
-		if(!memcmp(root_dir[i].fileName, fileName, sizeof(fileName))){
-			int returnFileSize = root_dir[i].fileSize;
-
+		if(!memcmp(root_dir[i].fileName, fdTable.fdEntries[fd].fileName, MAX_FILE_NAME_SIZE)){
+		 	returnFileSize = root_dir[i].fileSize;
+			break;
 		}
 	}
+	
 	return returnFileSize;
 }
 
 int fs_lseek(int fd, size_t offset)
 {
     fdTable.fdEntries[fd].offset = offset;
+	return 0;
 }
 
 int fs_write(int fd, void *buf, size_t count)
