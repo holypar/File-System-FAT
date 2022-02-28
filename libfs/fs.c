@@ -14,8 +14,9 @@
 
 //TO DO:
 	// 1.) Error Handling
-	// 2.) Start Phase 3
+	// 2.) Start/Finish Phase 3
 	// 3.) Clean up code
+
 // Superblock struct
 struct __attribute__((packed)) superblock { 
 	uint8_t signature[8]; 
@@ -39,11 +40,11 @@ struct __attribute__((packed)) rootDirEntry {
 struct __attribute__((packed)) fdEntry {
 	uint8_t fileName[MAX_FILE_NAME_SIZE];
 	uint64_t offset;
+	int status; //0 is available 1 is unvaiable
 };
 
 struct __attribute__((packed)) fdTable {
-	struct fdEntry fdEntries[FS_OPEN_MAX_COUNT];
-		
+	struct fdEntry fdEntries[FS_OPEN_MAX_COUNT];	
 };
 
 //initialize necessary structs
@@ -105,7 +106,7 @@ int fs_mount(const char *diskname)
 
 
 	for (int i = 0; i < FS_OPEN_MAX_COUNT; i++){
-		memset(fdTable.fdEntries[i].fileName,'\0', MAX_FILE_NAME_SIZE);
+		fdTable.fdEntries[i].status = 0; 
 	}
 
 	return 0;
@@ -165,7 +166,7 @@ int fs_info(void)
 			freeFatEntry++;
 		}
 	}
-	// Returning SuperBlock Information about ECS150-FS
+	// Returning SuperBlock Information about ECS150FS
 	printf("FS Info:\n");
 	printf("total_blk_count=%d\n", super_block.totalVirtualDiskBlocks);
 	printf("fat_blk_count=%d\n", super_block.fatBlocks);
@@ -220,9 +221,6 @@ int fs_delete(const char *filename)
 		/* Removing a file is the opposite procedure: the file’s 
 		entry must be emptied and all the data blocks containing the file’s 
 		contents must be freed in the FAT.*/
-		//if( ){
-
-		//}
 
 		uint16_t fat_position;
 		// Empty for loop
@@ -231,18 +229,12 @@ int fs_delete(const char *filename)
 		for (int i = 0; i < MAX_ROOT_FILES; i++){
 			// maybe have to use memcmp()
 			if(!memcmp(root_dir[i].fileName, filename, FS_FILENAME_LEN)){
-			
-				// empty file entry
-				// file's contents freed from FAT???
-				// free(root_dir[].
-				//fat_position = i;
 				fat_position = root_dir[i].indexOfFirstDataBlock;
 				 // this is the spot we look for in our fatTable	
 				root_dir[i].fileName[0] = '\0'; // setting filename to NULL? 
 				root_dir[i].fileSize = 0;  //uint32_t
 				root_dir[i].indexOfFirstDataBlock = FAT_EOC; // resets FAT to 0???
 				return 0;
-				//break; 
 			}
 		}
      
@@ -256,6 +248,7 @@ int fs_delete(const char *filename)
 			fat_position = next_position; // now move to the next pointer
 		}
 		fatTable[fat_position] = 0; // Once at the last spot, make it 0
+	
 	return 0;
 }
 
@@ -285,15 +278,29 @@ int fs_ls(void)
 
 int fs_open(const char *filename)
 {
+	// Error Handling
+	// 32 files can't be opened ; FS_OPEN_MAX_COUNT 
+	if (filename == NULL){
+		return -1;
+	}
+
+	/* From fs.h: A maximum of %FS_OPEN_MAX_COUNT files can be open
+ 	* simultaneously.*/
+
 	int returnFD = 0;
-	for (int i = 0; i < MAX_ROOT_FILES; i++){
-		if(memcmp(root_dir[i].fileName, filename, FS_FILENAME_LEN) == 0){      // these dont work
-			for(i = 0; i < FS_OPEN_MAX_COUNT; i++){
-				// memcmp(fdTable.fdEntries[i].fileName[i], "\0", 1)
-				if((fdTable.fdEntries[i].fileName[0] == '\0')){		// this is not gonna work 
-					memcpy(fdTable.fdEntries[i].fileName, filename, FS_FILENAME_LEN);
+	for (int i = 0; i < MAX_ROOT_FILES; i++){ // max root = 128
+		//if (memcmp(root_dir[].fileName, filename, ))
+		// this memcmp here main issue
+		// if(fdTable.fdEntries[i].fileName[0] )
+		if(strcmp((char*)root_dir[i].fileName, filename) == 0){      // check if filename even exists in the root dir beforehand
+			for(int i = 0; i < FS_OPEN_MAX_COUNT; i++){ //Max Count = 16
+				if((fdTable.fdEntries[i].status == 0)){		
+					memcpy(fdTable.fdEntries[i].fileName, filename, FS_FILENAME_LEN); // FS_FILENAME_LEN         check for first FDentry that's status is 0 
 					fdTable.fdEntries[i].offset = 0;
+					fdTable.fdEntries[i].status = 1;
 					returnFD = i;
+
+					// files_open++; // counter for opened files
 					break;
 				}
 			}
@@ -305,19 +312,26 @@ int fs_open(const char *filename)
 
 int fs_close(int fd)
 {
-        fdTable.fdEntries[fd].fileName[0] = '\0';
+        fdTable.fdEntries[fd].status = 0;
 		fdTable.fdEntries[fd].offset = 0;
+
+		// file decrease counter ; files_open--;
 		return 0;
 }
 
 int fs_stat(int fd)
 {
-	int returnFileSize = -999;
+	int returnFileSize = -1;
  	
+	// Error Handling
+	//if (fdTable.fdEntries[fd].fileName[0] == '\0'){
+		//return -1; 
+	//}
+
 	for (int i = 0; i < MAX_ROOT_FILES; i++){
-		if(!memcmp(root_dir[i].fileName, fdTable.fdEntries[fd].fileName, MAX_FILE_NAME_SIZE)){
-		 	returnFileSize = root_dir[i].fileSize;
-			break;
+		//once a file in the root directory matches the fdentry file name, we return that rootentry filesize
+		if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
+		 	returnFileSize = root_dir[i].fileSize; //updates filesize
 		}
 	}
 	
@@ -326,6 +340,7 @@ int fs_stat(int fd)
 
 int fs_lseek(int fd, size_t offset)
 {
+	// Need error handling here
     fdTable.fdEntries[fd].offset = offset;
 	return 0;
 }
