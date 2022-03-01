@@ -431,8 +431,10 @@ int fs_read(int fd, void *buf, size_t count)
 	if (offset_bounced + count > BLOCK_SIZE){
 		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
 		memcpy(buf, bounceBuffer + offset_bounced, BLOCK_SIZE - sizeof(bounceBuffer + offset_bounced)); 
+		//bounceBuffer
+		//offset_bounced = 0;
 
-
+		
 		// offset to end of first block
 		// all the middleblocks
 		// last block to count
