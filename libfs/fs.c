@@ -401,6 +401,21 @@ int fs_write(int fd, void *buf, size_t count)
 
 }
 
+//finds where to start reading
+// Potential Helper function here....
+uint16_t offset_helper(uint64_t offset, uint16_t firstDataBlockIndex){
+	int move = offset / BLOCK_SIZE;
+/*  For example, you will need a function that returns the 
+index of the data block corresponding to the file’s offset.*/ 
+	uint16_t firstBlock = firstDataBlockIndex; // 0xFFFF 3
+	int nextPosition = 0;
+	for (int i = 0; i < move; i++){ // less than or equal to? say when the offset of the file is 3000 then move = 0 
+		nextPosition = fatTable[firstDataBlockIndex];
+		firstDataBlockIndex = nextPosition;
+	}
+	return firstDataBlockIndex;
+}
+
 int fs_read(int fd, void *buf, size_t count)
 {
 	// Error Handling
@@ -414,127 +429,97 @@ int fs_read(int fd, void *buf, size_t count)
 	void* bounceBuffer = malloc(BLOCK_SIZE);
 	uint8_t* readFilename = fdTable.fdEntries[fd].fileName;
 	uint64_t offset = fdTable.fdEntries[fd].offset;
+	uint64_t initialOffset = fdTable.fdEntries[fd].offset;
 	uint16_t indexReadFirstDataBlock;
-	int root_size = 0;
-	uint64_t offset_bounced = offset % BLOCK_SIZE; // offset is only a part of the data block we want to get if user asks for it
-	uint16_t datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 
 	for(int i = 0; i < MAX_ROOT_FILES; i++){
 		if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
 			indexReadFirstDataBlock = root_dir[i].indexOfFirstDataBlock; //saves index of first data block
-			root_size++;
 			break;
 		}
 	}
 
+	uint64_t offset_bounced = offset % BLOCK_SIZE; // offset is only a part of the data block we want to get if user asks for it offset of the data block below this.
+	uint16_t datablockindex = offset_helper(offset, indexReadFirstDataBlock); // locates index of first data block to ACTUALLY READ IN ACCOUNTING FOR THE OFFSET for example if the FILE'S offset is 5000 we need to start reading at block 2nd block.
+
+	int bufTracking = 0;
+	int howManyBlocksToRead = ((offset_bounced + count) / BLOCK_SIZE) + 1;  //example 3000 block offset want to read 10000.  // 3 // 4 blocks for 3000 fof and 10000 read good
+	int totalBytesTransferred = 0;
+
+	if((offset_bounced + count) % BLOCK_SIZE == 0){
+		howManyBlocksToRead--;  //2 
+	} 
 	// Larger Operation
-	if (offset_bounced + count > BLOCK_SIZE){
-		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
-		memcpy(buf, bounceBuffer + offset_bounced, BLOCK_SIZE - sizeof(bounceBuffer + offset_bounced)); 
-		//bounceBuffer
-		//offset_bounced = 0;
+		if (offset_bounced + count > BLOCK_SIZE){
 
-		
-		// offset to end of first block
-		// all the middleblocks
-		// last block to count
-	
+			//copy over  from the location of first data block offset to the end of that block
+			block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); // read in WHOLE block into the bouncebuffer
+			memcpy(buf, bounceBuffer + offset_bounced, BLOCK_SIZE - offset_bounced);  // only import from offset to end of THAT block
+			bufTracking += BLOCK_SIZE - offset_bounced; //next time we copy into it, we copy into buf + buftracking
+			howManyBlocksToRead--;  // 1  //3
+			fdTable.fdEntries[fd].offset += BLOCK_SIZE - offset_bounced;
+			offset += BLOCK_SIZE - offset_bounced;
+			totalBytesTransferred +=  BLOCK_SIZE - offset_bounced;
+	// inner blocks read fully
+			for (int i = 1; i < howManyBlocksToRead; i++ ){
+				datablockindex = offset_helper(offset, indexReadFirstDataBlock); // this is now the next index
+				block_read(datablockindex + super_block.dataBlockStartIndex, buf + bufTracking); // i can read these full blocks directly into the return buf
+				bufTracking += BLOCK_SIZE; //we read in 1 block each time
+				fdTable.fdEntries[fd].offset += BLOCK_SIZE;
+				offset += BLOCK_SIZE;
+				totalBytesTransferred += BLOCK_SIZE;
+				if (totalBytesTransferred == count){
+					free(bounceBuffer);
+					return totalBytesTransferred; // this handles the case where the initial file offset is 3000 and i want to read 5192 bytes. so basically the last block i read is exactly 4096 bytes.
+				}
+		}
+
+			//finally read the leftover data in the LAST datablock if needed
+			datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+			block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); //copy whole block into bouncebuffer
+			memcpy(buf + bufTracking, bounceBuffer, ((initialOffset + count) % BLOCK_SIZE));
+			fdTable.fdEntries[fd].offset += ((initialOffset + count) % BLOCK_SIZE);
+			offset += (initialOffset + count) % BLOCK_SIZE;
+			totalBytesTransferred += ((initialOffset + count) % BLOCK_SIZE);
+			free(bounceBuffer);
+			return totalBytesTransferred;
 	}
-
 	// Small Operation
 	if(offset_bounced + count <= BLOCK_SIZE){
-		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
-		memcpy(buf, bounceBuffer + offset_bounced, count); 
+		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); // copies the WHOLE block in where the offset is at.
+		memcpy(buf, bounceBuffer + offset_bounced, count); //we only want to copy over from the offset of that datablock and how much we want to read.
+		fdTable.fdEntries[fd].offset += count;
+		totalBytesTransferred += count;
+		free(bounceBuffer);
+		return totalBytesTransferred;
 	}
 
 
 
-	// if (count == BLOCK_SIZE && offset == (uint64_t)0){
-	// 	block_read(indexReadFirstDataBlock, buf);
-		
+	// int fd_size = fs_stat(fd); // obtaining fd size
+	// if (fd_size == 0){
+	// 	return -1; // Meaning file doesn't exist to be read
 	// }
 
-	if (count < BLOCK_SIZE && offset == (uint64_t)0){
-		block_read(indexReadFirstDataBlock, bounceBuffer);
-		memcpy(buf, bounceBuffer, count);
-	}
+	// for(int i = 0; i < count; i++){
+	// 	// update offset as we move
+	// 	fdTable.fdEntries[fd].offset = offset;
+	// 	if (bounceBuffer < /* > */ BLOCK_SIZE){
+	// 		//if() 
+	// 		// might need to create a helper function here
 
-	int fd_size = fs_stat(fd); // obtaining fd size
-	if (fd_size == 0){
-		return -1; // Meaning file doesn't exist to be read
-	}
+	// 	}
+	// 	if (offset > fd_size){
+	// 		return 0; // End of offset reading/file
+	// 	}
 
-	for(int i = 0; i < count; i++){
-		// update offset as we move
-		fdTable.fdEntries[fd].offset = offset;
-		if (bounceBuffer < /* > */ BLOCK_SIZE){
-			//if() 
-			// might need to create a helper function here
-
-		}
-		if (offset > fd_size){
-			return 0; // End of offset reading/file
-		}
-
-		//memcpy(bounceBuffer,);
-		memcpy(buf, bounceBuffer, count);
-	}
+	// 	//memcpy(bounceBuffer,);
+	// 	memcpy(buf, bounceBuffer, count);
+	// }
 
 
-	return 0; 
-	// bounce buffer = temp mem
-// Bigger test case, requires  a mix of bouncedBuffer and direct copy whenever possible
-
-	//1000 bytes
-	// 500 inside the file
-
-	//uint16_t datablockindex = indexReadFirstDataBlock + helper_func(offset, indexReadFirstDataBlock);
-	// helper obtains the offset
-	// int next;
-
-// 	/*  The number of bytes read can be smaller than @count if there are less than
-//  * @count bytes until the end of the file*/
-// 	for(int i = 0; i < count; i++){
-// 		fdTable.fdEntries[fd].offset = offset; //updating offset
-// 		if(offset_bounced >= BLOCK_SIZE){
-// 			offset_bounced = 0; // Offset is back to 0 
-// 			next = helper_func(offset, indexReadFirstDataBlock); // move to next position in data block??
-		
-// 		}
-// 		// memcpy(buf, bounceBuffer + offset_bounced, ???) since buffer and offset go together?
-// 		memcpy(buf, bounceBuffer, offset_bounced); // Check on this
-		
-// 		// check if offset is bigger than data block
-// 		// resets the offset??
-// 		// iterate through all available data blocks??
-// 		// memcpy() after the buf and offset
-
-// 	}
-
-
-
-		// From OH
-		// bounce_buffer changes ; offset updates 
-
-		/* Attempt to read @count bytes of data from the file referenced by file
- * descriptor @fd into buffer pointer by @buf. It is assumed that @buf is large
- * enough to hold at least @count bytes.*/ 
-
+	// return 0; 
 
 
 }
 
-//finds where to start reading
-// Potential Helper function here....
-uint16_t offset_helper(uint64_t offset, uint16_t firstDataBlockIndex){
-	int move = offset / BLOCK_SIZE;
-/*  For example, you will need a function that returns the 
-index of the data block corresponding to the file’s offset.*/ 
-	uint16_t firstBlock = firstDataBlockIndex; // 0xFFFF 3
-	int nextPosition = 0;
-	for (int i = 0; i < move; i++){
-		nextPosition = fatTable[firstDataBlockIndex];
-		firstDataBlockIndex = nextPosition;
-	}
-	return firstDataBlockIndex;
-}
