@@ -439,6 +439,7 @@ int fs_read(int fd, void *buf, size_t count)
 		}
 	}
 
+
 	uint64_t offset_bounced = offset % BLOCK_SIZE; // offset is only a part of the data block we want to get if user asks for it offset of the data block below this.
 	uint16_t datablockindex = offset_helper(offset, indexReadFirstDataBlock); // locates index of first data block to ACTUALLY READ IN ACCOUNTING FOR THE OFFSET for example if the FILE'S offset is 5000 we need to start reading at block 2nd block.
 
