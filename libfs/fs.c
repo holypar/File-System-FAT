@@ -374,7 +374,7 @@ int fs_stat(int fd)
 int fs_lseek(int fd, size_t offset)
 {
 
-	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fdTable.fdEntries[fd].fileName[0] == '\0'){
+	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fd > 31 || fdTable.fdEntries[fd].fileName[0] == '\0'){
 		return -1;
 	}
 
@@ -387,32 +387,134 @@ int fs_lseek(int fd, size_t offset)
 	return 0;
 }
 
-int fs_write(int fd, void *buf, size_t count)
-{
-        /* TODO: Phase 4 */
-	if (buf == NULL){
-		return -1;
-	}
-	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fdTable.fdEntries[fd].fileName[0] == '\0'){
-		return -1;
-	}
-
-	return 0;
-
-}
-
 // Finds where to start reading
 uint16_t offset_helper(uint64_t offset, uint16_t firstDataBlockIndex){
+
 	int move = offset / BLOCK_SIZE;
-	//uint16_t firstBlock = firstDataBlockIndex; // 0xFFFF 3
 	int nextPosition = 0;
-	
+	//uint16_t indexReadFirstDataBlock = 999;
+
 	for (int i = 0; i < move; i++){ // less than or equal to? say when the offset of the file is 3000 then move = 0 
 		nextPosition = fatTable[firstDataBlockIndex];
 		firstDataBlockIndex = nextPosition;
 	}
-	return firstDataBlockIndex;
+	return firstDataBlockIndex; 
 }
+
+//uint16_t fatblockAdder(){
+	//for(int i = 0; i < super_block.dataBlockStartIndex; i++){
+//
+	//}
+//}
+
+int fs_write(int fd, void *buf, size_t count)
+{
+    /* TODO: Phase 4 */
+	// Error Handling
+	if (buf == NULL){
+		return -1;
+	}
+	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fd > 31 ||fdTable.fdEntries[fd].fileName[0] == '\0'){
+		return -1;
+	}
+
+	void* bounceBuffer = malloc(BLOCK_SIZE);
+	uint64_t offset = fdTable.fdEntries[fd].offset;
+	uint64_t initialOffset = fdTable.fdEntries[fd].offset;
+	uint16_t indexReadFirstDataBlock = 999;
+	
+
+	for(int i = 0; i < MAX_ROOT_FILES; i++){
+		if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
+			indexReadFirstDataBlock = root_dir[i].indexOfFirstDataBlock; //saves index of first data block
+			break;
+		}
+	}
+
+	uint64_t offset_bounced = offset % BLOCK_SIZE; // offset is only a part of the data block we want to get if user asks for it offset of the data block below this.
+	uint16_t datablockindex = offset_helper(offset, indexReadFirstDataBlock); // locates index of first data block to ACTUALLY READ IN ACCOUNTING FOR THE OFFSET for example if the FILE'S offset is 5000 we need to start reading at block 2nd block.
+
+	int bufTracking = 0;
+	int howManyBlocksToRead = ((offset_bounced + count) / BLOCK_SIZE) + 1;  //example 3000 block offset want to read 10000.  // 3 // 4 blocks for 3000 fof and 10000 read good
+	size_t totalBytesTransferred = 0;
+
+
+	//large operation
+	if (offset_bounced + count > BLOCK_SIZE){
+
+		//first block
+		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); 
+		memcpy(bounceBuffer + offset_bounced, buf, BLOCK_SIZE - offset_bounced);
+		block_write(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
+		totalBytesTransferred += BLOCK_SIZE - offset_bounced;
+		bufTracking += BLOCK_SIZE - offset_bounced;
+		offset +=  BLOCK_SIZE - offset_bounced;
+		fdTable.fdEntries[fd].offset +=  BLOCK_SIZE - offset_bounced;
+		howManyBlocksToRead--;
+
+	// all inner blocks + that edge case
+		for (int i = 1; i < howManyBlocksToRead; i++ ){
+			datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+			if (fatTable[datablockindex] == FAT_EOC){
+				//call  fatblockadder - cycle thru the fat table and look for the the first one that is 0
+				for (int i = 0; i < super_block.fatBlocks; i++){
+					if (fatTable[i] == 0){
+						int new_index = i; 
+						fatTable[datablockindex] = new_index;
+						fatTable[i] = FAT_EOC;
+						break;
+					}
+				}
+				datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+				block_write(datablockindex + super_block.dataBlockStartIndex, buf + bufTracking); // i can read these full blocks directly into the return buf
+				bufTracking += BLOCK_SIZE; //we read in 1 block each time
+				fdTable.fdEntries[fd].offset += BLOCK_SIZE;
+				offset += BLOCK_SIZE;
+				totalBytesTransferred += BLOCK_SIZE;
+				if (totalBytesTransferred == count){ // edge case
+					free(bounceBuffer);
+					return totalBytesTransferred; // this handles the case where the initial file offset is 3000 and i want to read 5192 bytes. so basically the last block i read is exactly 4096 bytes.
+				}
+				
+			}
+		}
+		datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+			if (fatTable[datablockindex] == FAT_EOC){
+				//call  fatblockadder - cycle thru the fat table and look for the the first one that is 0
+				for (int i = 0; i < super_block.fatBlocks; i++){
+					if (fatTable[i] == 0){
+						int new_index = i; 
+						fatTable[datablockindex] = new_index;
+						fatTable[i] = FAT_EOC;
+						break;
+					}
+				}
+				datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+				block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
+				memcpy(bounceBuffer, buf + bufTracking, ((initialOffset + count) % BLOCK_SIZE));
+				block_write(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);	
+				bufTracking += BLOCK_SIZE; //we read in 1 block each time
+				fdTable.fdEntries[fd].offset += BLOCK_SIZE;
+				offset += BLOCK_SIZE;
+				totalBytesTransferred += BLOCK_SIZE;
+				free(bounceBuffer);
+				return totalBytesTransferred;
+		}
+	}
+	//Small Operation
+	if(offset_bounced + count <= BLOCK_SIZE){
+		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); // copies the WHOLE block in where the offset is at.
+		// we need to write inside of the bouncebuffer from bounceBuffer + offset_bounced count times
+		memcpy(bounceBuffer + offset_bounced, buf, count); //we only want to copy over from the offset of that datablock and how much we want to read.
+		block_write(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
+		fdTable.fdEntries[fd].offset += count;
+		totalBytesTransferred += count;
+		free(bounceBuffer);
+		return totalBytesTransferred;
+	}
+	return totalBytesTransferred;
+}
+
 
 int fs_read(int fd, void *buf, size_t count)
 {
@@ -420,7 +522,7 @@ int fs_read(int fd, void *buf, size_t count)
 	if (buf == NULL){
 		return -1;
 	}
-	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fdTable.fdEntries[fd].fileName[0] == '\0'){
+	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fd > 31 || fdTable.fdEntries[fd].fileName[0] == '\0'){
 		return -1;
 	}
 	
@@ -471,7 +573,6 @@ int fs_read(int fd, void *buf, size_t count)
 					return totalBytesTransferred; // this handles the case where the initial file offset is 3000 and i want to read 5192 bytes. so basically the last block i read is exactly 4096 bytes.
 				}
 		}
-
 			//finally read the leftover data in the LAST datablock if needed
 			datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 			block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); //copy whole block into bouncebuffer
@@ -482,6 +583,7 @@ int fs_read(int fd, void *buf, size_t count)
 			free(bounceBuffer);
 			return totalBytesTransferred;
 	}
+
 	// Small Operation
 	if(offset_bounced + count <= BLOCK_SIZE){
 		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); // copies the WHOLE block in where the offset is at.
