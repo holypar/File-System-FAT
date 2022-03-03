@@ -433,9 +433,27 @@ int fs_write(int fd, void *buf, size_t count)
 	int howManyBlocksToRead = ((offset_bounced + count) / BLOCK_SIZE) + 1;  //example 3000 block offset want to read 10000.  // 3 // 4 blocks for 3000 fof and 10000 read good
 	size_t totalBytesTransferred = 0;
 
+	int new_index = 0;
 
+	if(indexReadFirstDataBlock == FAT_EOC){
+		for (int i = 0; i < super_block.amountDataBlocks; i++)
+		{
+			if(fatTable[i] == 0){
+				indexReadFirstDataBlock = i;
+				new_index = i;
+				fatTable[indexReadFirstDataBlock] = new_index;
+				fatTable[i] = FAT_EOC;
+				//check rootdirectory -> first data block index  is gonna be that one
+				//count
+				break;
+			}
+		}
+		
+	}
+	datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 	//large operation
     if (offset_bounced + count > BLOCK_SIZE){
+
         //first block
         block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); 
         memcpy(bounceBuffer + offset_bounced, buf, BLOCK_SIZE - offset_bounced);
@@ -444,6 +462,7 @@ int fs_write(int fd, void *buf, size_t count)
         bufTracking += BLOCK_SIZE - offset_bounced;
         offset +=  BLOCK_SIZE - offset_bounced;
         fdTable.fdEntries[fd].offset +=  BLOCK_SIZE - offset_bounced;
+		//update root dir size += the thing above writing past the file size
         howManyBlocksToRead--;
 
         // all inner blocks + that edge case
@@ -451,7 +470,7 @@ int fs_write(int fd, void *buf, size_t count)
             datablockindex = offset_helper(offset, indexReadFirstDataBlock);
             if (fatTable[datablockindex] == FAT_EOC){
                 int new_index = -1;
-                for (int i = 0; i < super_block.fatBlocks; i++){
+                for (int i = 0; i < super_block.amountDataBlocks; i++){
                     if (fatTable[i] == 0){
                         new_index = i; 
                         fatTable[datablockindex] = new_index;
@@ -478,7 +497,7 @@ int fs_write(int fd, void *buf, size_t count)
         datablockindex = offset_helper(offset, indexReadFirstDataBlock);
             if (fatTable[datablockindex] == FAT_EOC){
                 int new_index = -1;
-                for (int i = 0; i < super_block.fatBlocks; i++){
+                for (int i = 0; i < super_block.amountDataBlocks; i++){
                     if (fatTable[i] == 0){
                         new_index = i; 
                         fatTable[datablockindex] = new_index;
