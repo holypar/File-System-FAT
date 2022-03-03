@@ -279,7 +279,6 @@ int fs_ls(void)
 int fs_open(const char *filename)
 {
 	// Error Handling
-	// 32 files can't be opened ; FS_OPEN_MAX_COUNT 
 	if (filename == NULL || opened_vd == -1 || strlen(filename) > FS_FILENAME_LEN){
 		return -1;
 	}
@@ -361,7 +360,6 @@ uint16_t offset_helper(uint64_t offset, uint16_t firstDataBlockIndex){
 
 	int move = offset / BLOCK_SIZE;
 	int nextPosition = 0;
-	//uint16_t indexReadFirstDataBlock = 999;
 
 	for (int i = 0; i < move; i++){ // less than or equal to? say when the offset of the file is 3000 then move = 0 
 		nextPosition = fatTable[firstDataBlockIndex];
