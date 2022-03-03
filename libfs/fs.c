@@ -17,7 +17,6 @@
 	// 2.) Lookover for error Handling/edge cases
 	// 3.) Clean up any code
 
-
 // Superblock Struct
 struct __attribute__((packed)) superblock { 
 	uint8_t signature[8]; 
@@ -59,6 +58,7 @@ struct fdTable fdTable;
 
 // Global Variable for if Virtual Disk is opened (For )
 int opened_vd = -1;
+int file_exists = 0;
 
 
 int fs_mount(const char *diskname)
@@ -159,7 +159,7 @@ int fs_umount(void)
 
 int fs_info(void)
 {
-
+	// Error Handling for if disk was not opened
 	if (opened_vd == -1){
 		return -1;
 	}
@@ -193,21 +193,28 @@ int fs_info(void)
 
 int fs_create(const char *filename)
 {
-
 	// Error Handling
+	for(int i = 0 ; i < MAX_ROOT_FILES; i++){
+	if(filename == root_dir[i].fileName){
+		return -1;
+	}
+	}
+
 	if(filename == NULL || opened_vd == -1 || strlen(filename) > FS_FILENAME_LEN){
 		return -1;
 	}
 
-	int file_exists = 0;
+	
 	// Error Handling loop to check if file already exists in directory
 	for (int i = 0; i < MAX_ROOT_FILES; i++){
 		if(root_dir[i].fileName[0] != '\0'){
 			file_exists++;
 		}
+
 		if(strcmp((char*)root_dir[i].fileName, filename) == 0){
 			return -1; // Means file already exists in Root Directory
 		}
+
 		// Error Handling if Directory has reached its max files
 		if (file_exists == FS_FILE_MAX_COUNT){
 			return -1; 
@@ -232,29 +239,43 @@ int fs_delete(const char *filename)
 		return -1;
 	}
 
-		uint16_t fat_position = 9999;
-
-		for (int i = 0; i < MAX_ROOT_FILES; i++){
-			// maybe have to use memcmp()
-			if(!memcmp(root_dir[i].fileName, filename, FS_FILENAME_LEN)){
-				fat_position = root_dir[i].indexOfFirstDataBlock;
-				 // this is the spot we look for in our fatTable	
-				root_dir[i].fileName[0] = '\0'; // setting filename to NULL? 
-				root_dir[i].fileSize = 0;  //uint32_t
-				root_dir[i].indexOfFirstDataBlock = FAT_EOC; // resets FAT to 0???
-				return 0;
+	uint16_t fat_position = 9999;
+	int found = -1;	//checks if the file the user wants to delete is in the root dir
+	for (int i = 0; i < MAX_ROOT_FILES; i++){
+		if(!memcmp(root_dir[i].fileName, filename, FS_FILENAME_LEN)){
+			//we check for a matching name in the fdtable.fdentries and then change thats status
+			for(int i = 0; i < FS_OPEN_MAX_COUNT; i++){
+				if(memcmp(fdTable.fdEntries[i].fileName, filename, FS_FILENAME_LEN ) == 0){
+					if(fdTable.fdEntries[i].status == 1){
+						return -1;
+					}
+				}
+			fat_position = root_dir[i].indexOfFirstDataBlock;
+			 // this is the spot we look for in our fatTable	
+			root_dir[i].fileName[0] = '\0'; // setting filename to NULL
+			file_exists--;
+			root_dir[i].fileSize = 0;  //uint32_t
+			root_dir[i].indexOfFirstDataBlock = FAT_EOC; // Block is now FAT_EOC
+			found = 0;
+			return 0;
 			}
 		}
-     
-		// Free Fat Table contents
-		uint16_t next_position;
+	}
 
-		while(fatTable[fat_position] != FAT_EOC){
-			next_position = fatTable[fat_position]; // save where to go next
-			fatTable[next_position] = 0; //set current data entry to 0
-			fat_position = next_position; // now move to the next pointer
-		}
-		fatTable[fat_position] = 0; // Once at the last spot, make it 0
+	// Error Handling for no file to be deleted is found
+	if (found == -1){
+		return -1; 
+	}
+     
+	// Free Fat Table contents
+	uint16_t next_position;
+
+	while(fatTable[fat_position] != FAT_EOC){
+		next_position = fatTable[fat_position]; // save where to go next
+		fatTable[next_position] = 0; //set current data entry to 0
+		fat_position = next_position; // now move to the next pointer
+	}
+	fatTable[fat_position] = 0; // Once at the last spot, make it 0
 	
 	return 0;
 }
@@ -278,16 +299,19 @@ int fs_ls(void)
 
 int fs_open(const char *filename)
 {
+
 	// Error Handling
 	if (filename == NULL || opened_vd == -1 || strlen(filename) > FS_FILENAME_LEN){
 		return -1;
 	}
 
+	// Error Handling ; Checking max count 
 	if (fdTable.openFiles > FS_OPEN_MAX_COUNT){
 		return -1;
 	}
 
 	int returnFD = 0; //1;
+	int found = -1;
 	for (int i = 0; i < MAX_ROOT_FILES; i++){ // max root = 128
 		if(strcmp((char*)root_dir[i].fileName, filename) == 0){      // check if filename even exists in the root dir beforehand
 			for(int i = 0; i < FS_OPEN_MAX_COUNT; i++){ //Max Count = 32
@@ -296,12 +320,20 @@ int fs_open(const char *filename)
 					fdTable.fdEntries[i].offset = 0;
 					fdTable.fdEntries[i].status = 1;
 					fdTable.openFiles += 1;
+					found = 0;
 					returnFD = i;
 					break;
 				}
 			}
 		}
 	}
+
+	// Error Handling
+	if (found == -1){
+		return -1;
+	}
+
+
 	return returnFD;
 }
 
@@ -322,13 +354,13 @@ int fs_close(int fd)
 int fs_stat(int fd)
 {
 
-	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fdTable.fdEntries[fd].fileName[0] == '\0'){
+	// Error Handling ; Out of Bounds ; Filename is invalid
+	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fdTable.fdEntries[fd].status == 0){
 		return -1;
 	}
 
 	int returnFileSize = -1;
  	
-
 	for (int i = 0; i < MAX_ROOT_FILES; i++){
 		//once a file in the root directory matches the fdentry file name, we return that rootentry filesize
 		if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
@@ -342,7 +374,8 @@ int fs_stat(int fd)
 int fs_lseek(int fd, size_t offset)
 {
 
-	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fd > 31 || fdTable.fdEntries[fd].fileName[0] == '\0'){
+	// Error Handling; Out of Bounds fd ; filename is Null
+	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fdTable.fdEntries[fd].fileName[0] == '\0'){
 		return -1;
 	}
 
@@ -374,7 +407,9 @@ int fs_write(int fd, void *buf, size_t count)
 	if (buf == NULL){
 		return -1;
 	}
-	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fd > 31 ||fdTable.fdEntries[fd].fileName[0] == '\0'){
+
+	// Error Handling; Out of Bounds fd ; filename 
+	if (fd > FS_OPEN_MAX_COUNT || fd < 0 || fdTable.fdEntries[fd].fileName[0] == '\0'){
 		return -1;
 	}
 
