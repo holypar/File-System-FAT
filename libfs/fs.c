@@ -195,9 +195,10 @@ int fs_create(const char *filename)
 {
 	// Error Handling
 	for(int i = 0 ; i < MAX_ROOT_FILES; i++){
-	if(filename == root_dir[i].fileName){
+	if(filename == (char*)root_dir[i].fileName){
 		return -1;
 	}
+	
 	}
 
 	if(filename == NULL || opened_vd == -1 || strlen(filename) > FS_FILENAME_LEN){
