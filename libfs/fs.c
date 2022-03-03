@@ -195,17 +195,15 @@ int fs_create(const char *filename)
 {
 	// Error Handling
 	for(int i = 0 ; i < MAX_ROOT_FILES; i++){
-	if(filename == (char*)root_dir[i].fileName){
-		return -1;
-	}
-	
+		if(filename == (char*)root_dir[i].fileName){
+			return -1;
+		}
 	}
 
 	if(filename == NULL || opened_vd == -1 || strlen(filename) > FS_FILENAME_LEN){
 		return -1;
 	}
 
-	
 	// Error Handling loop to check if file already exists in directory
 	for (int i = 0; i < MAX_ROOT_FILES; i++){
 		if(root_dir[i].fileName[0] != '\0'){
@@ -366,6 +364,7 @@ int fs_stat(int fd)
 		//once a file in the root directory matches the fdentry file name, we return that rootentry filesize
 		if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
 		 	returnFileSize = root_dir[i].fileSize; //updates filesize
+			return returnFileSize;
 		}
 	}
 	
