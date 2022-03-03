@@ -407,10 +407,8 @@ int fs_write(int fd, void *buf, size_t count)
 	int howManyBlocksToRead = ((offset_bounced + count) / BLOCK_SIZE) + 1;  //example 3000 block offset want to read 10000.  // 3 // 4 blocks for 3000 fof and 10000 read good
 	size_t totalBytesTransferred = 0;
 
-
 	//large operation
 	if (offset_bounced + count > BLOCK_SIZE){
-
 		//first block
 		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); 
 		memcpy(bounceBuffer + offset_bounced, buf, BLOCK_SIZE - offset_bounced);
@@ -425,14 +423,17 @@ int fs_write(int fd, void *buf, size_t count)
 		for (int i = 1; i < howManyBlocksToRead; i++ ){
 			datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 			if (fatTable[datablockindex] == FAT_EOC){
-				//call  fatblockadder - cycle thru the fat table and look for the the first one that is 0
+				int new_index = -1;
 				for (int i = 0; i < super_block.fatBlocks; i++){
 					if (fatTable[i] == 0){
-						int new_index = i; 
+						new_index = i; 
 						fatTable[datablockindex] = new_index;
 						fatTable[i] = FAT_EOC;
 						break;
 					}
+				}
+				if (new_index == -1){
+					return totalBytesTransferred; // No more bytes/space to be written
 				}
 				datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 				block_write(datablockindex + super_block.dataBlockStartIndex, buf + bufTracking); // i can read these full blocks directly into the return buf
@@ -449,14 +450,17 @@ int fs_write(int fd, void *buf, size_t count)
 		}
 		datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 			if (fatTable[datablockindex] == FAT_EOC){
-				//call  fatblockadder - cycle thru the fat table and look for the the first one that is 0
+				int new_index = -1;
 				for (int i = 0; i < super_block.fatBlocks; i++){
 					if (fatTable[i] == 0){
-						int new_index = i; 
+						new_index = i; 
 						fatTable[datablockindex] = new_index;
 						fatTable[i] = FAT_EOC;
 						break;
 					}
+				}
+				if (new_index == -1){
+					return totalBytesTransferred; // No more bytes/space to be written
 				}
 				datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 				block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
