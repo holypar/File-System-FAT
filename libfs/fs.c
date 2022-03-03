@@ -12,12 +12,13 @@
 #define MAX_ROOT_FILES 128
 #define MAX_FILE_NAME_SIZE 16
 
-//TO DO:
-	// 1.) Error Handling
-	// 2.) Start/Finish Phase 4
-	// 3.) Clean up code
+// TO Do
+	// 1.) Comments
+	// 2.) Lookover for error Handling/edge cases
+	// 3.) Clean up any code
 
-// Superblock struct
+
+// Superblock Struct
 struct __attribute__((packed)) superblock { 
 	uint8_t signature[8]; 
 	uint16_t totalVirtualDiskBlocks;
@@ -28,6 +29,7 @@ struct __attribute__((packed)) superblock {
 	uint8_t padding[4079]; 
 };
 
+// Root Directory Struct
 struct __attribute__((packed)) rootDirEntry {
 	uint8_t fileName[MAX_FILE_NAME_SIZE];  //16 bytes
 	uint32_t fileSize;	   // 4 bytes
@@ -36,25 +38,26 @@ struct __attribute__((packed)) rootDirEntry {
 	//total 32 bytes
 };
 
-// make file name null in mount
+// Struct to make filename NULL for mount
 struct __attribute__((packed)) fdEntry {
 	uint8_t fileName[MAX_FILE_NAME_SIZE];
 	uint64_t offset;
-	int status; //0 is available 1 is unvaiable
+	int status; // 0 is available;  1 is unvaiable
 };
 
+// Struct for File Descriptors
 struct __attribute__((packed)) fdTable {
 	int openFiles;
 	struct fdEntry fdEntries[FS_OPEN_MAX_COUNT];	
 };
 
-//initialize necessary structs
+// Initializing Structs
 struct superblock super_block;
 struct rootDirEntry root_dir[MAX_ROOT_FILES];
 uint16_t *fatTable;
 struct fdTable fdTable;
 
-//Global Variable for if Virtual Disk is opened
+// Global Variable for if Virtual Disk is opened (For )
 int opened_vd = -1;
 
 
@@ -279,6 +282,10 @@ int fs_ls(void)
 	return 0; 
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 7ebb52f7e5d6180bc40702fa40cb252e05a1aabb
 int fs_open(const char *filename)
 {
 	// Error Handling
@@ -291,15 +298,8 @@ int fs_open(const char *filename)
 		return -1;
 	}
 
-	/* From fs.h: A maximum of %FS_OPEN_MAX_COUNT files can be open
- 	* simultaneously.*/
-
-// Check back here ; potential error in returning FD ****
 	int returnFD = 0; //1;
 	for (int i = 0; i < MAX_ROOT_FILES; i++){ // max root = 128
-		//if (memcmp(root_dir[].fileName, filename, ))
-		// this memcmp here main issue
-		// if(fdTable.fdEntries[i].fileName[0] )
 		if(strcmp((char*)root_dir[i].fileName, filename) == 0){      // check if filename even exists in the root dir beforehand
 			for(int i = 0; i < FS_OPEN_MAX_COUNT; i++){ //Max Count = 32
 				if((fdTable.fdEntries[i].status == 0)){		
@@ -308,8 +308,6 @@ int fs_open(const char *filename)
 					fdTable.fdEntries[i].status = 1;
 					fdTable.openFiles += 1;
 					returnFD = i;
-
-					// files_open++; // counter for opened files
 					break;
 				}
 			}
@@ -382,7 +380,10 @@ uint16_t offset_helper(uint64_t offset, uint16_t firstDataBlockIndex){
 	return firstDataBlockIndex; 
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 7ebb52f7e5d6180bc40702fa40cb252e05a1aabb
 int fs_write(int fd, void *buf, size_t count)
 {
 	// Error Handling
@@ -425,7 +426,7 @@ int fs_write(int fd, void *buf, size_t count)
 		fdTable.fdEntries[fd].offset +=  BLOCK_SIZE - offset_bounced;
 		howManyBlocksToRead--;
 
-	// all inner blocks + that edge case
+		// all inner blocks + that edge case
 		for (int i = 1; i < howManyBlocksToRead; i++ ){
 			datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 			if (fatTable[datablockindex] == FAT_EOC){
@@ -506,7 +507,6 @@ int fs_read(int fd, void *buf, size_t count)
 	}
 	
 	void* bounceBuffer = malloc(BLOCK_SIZE);
-	//uint8_t* readFilename = fdTable.fdEntries[fd].fileName;
 	uint64_t offset = fdTable.fdEntries[fd].offset;
 	uint64_t initialOffset = fdTable.fdEntries[fd].offset;
 	uint16_t indexReadFirstDataBlock = 999;
@@ -518,7 +518,6 @@ int fs_read(int fd, void *buf, size_t count)
 		}
 	}
 
-
 	uint64_t offset_bounced = offset % BLOCK_SIZE; // offset is only a part of the data block we want to get if user asks for it offset of the data block below this.
 	uint16_t datablockindex = offset_helper(offset, indexReadFirstDataBlock); // locates index of first data block to ACTUALLY READ IN ACCOUNTING FOR THE OFFSET for example if the FILE'S offset is 5000 we need to start reading at block 2nd block.
 
@@ -529,6 +528,7 @@ int fs_read(int fd, void *buf, size_t count)
 	if((offset_bounced + count) % BLOCK_SIZE == 0){
 		howManyBlocksToRead--;  //2 
 	} 
+
 	// Larger/Bigger Operation
 		if (offset_bounced + count > BLOCK_SIZE){
 			//copy over  from the location of first data block offset to the end of that block
@@ -575,6 +575,3 @@ int fs_read(int fd, void *buf, size_t count)
 
 	return totalBytesTransferred;
 }
-
-
-
