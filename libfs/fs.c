@@ -287,7 +287,7 @@ int fs_ls(void)
 	}
 
 	printf("FS Ls:\n");
-	for (int i=0; i < MAX_FILE_NAME_SIZE; i++){
+	for (int i=0; i < MAX_ROOT_FILES; i++){
 		if( root_dir[i].fileName[0] != '\0'){
 			printf("file: %s, size: %d, data_blk: %d\n", root_dir[i].fileName, root_dir[i].fileSize, root_dir[i].indexOfFirstDataBlock);
 		}
@@ -448,6 +448,12 @@ int fs_write(int fd, void *buf, size_t count)
 				break;
 			}
 		}
+		for(int i = 0; i < MAX_ROOT_FILES; i++){
+			if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
+				root_dir[i].indexOfFirstDataBlock = new_index;  		//update root dir indexoffirstdatablock
+				break;
+			}
+		}
 		
 	}
 	datablockindex = offset_helper(offset, indexReadFirstDataBlock);
@@ -529,6 +535,12 @@ int fs_write(int fd, void *buf, size_t count)
 		fdTable.fdEntries[fd].offset += count;
 		totalBytesTransferred += count;
 		free(bounceBuffer);
+		for(int i = 0; i < MAX_ROOT_FILES; i++){
+			if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
+				root_dir[i].fileSize += count;  		//update root dir indexoffirstdatablock
+				break;
+			}
+		}
 		return totalBytesTransferred;
 	}
 	return totalBytesTransferred;
