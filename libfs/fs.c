@@ -431,9 +431,9 @@ int fs_write(int fd, void *buf, size_t count)
 
 	int bufTracking = 0;
 	int howManyBlocksToRead = ((offset_bounced + count) / BLOCK_SIZE) + 1;  //example 3000 block offset want to read 10000.  // 3 // 4 blocks for 3000 fof and 10000 read good
-	size_t totalBytesTransferred = 0;
 
-	int new_index = 0;
+	size_t totalBytesTransferred = 0;
+	int new_index = -1;
 
 	if(indexReadFirstDataBlock == FAT_EOC){
 		for (int i = 0; i < super_block.amountDataBlocks; i++)
@@ -456,6 +456,9 @@ int fs_write(int fd, void *buf, size_t count)
 		}
 		
 	}
+	if(new_index == -1){
+		return totalBytesTransferred; //no space to write onto file.
+	}
 	datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 	//large operation
     if (offset_bounced + count > BLOCK_SIZE){
@@ -470,6 +473,12 @@ int fs_write(int fd, void *buf, size_t count)
         fdTable.fdEntries[fd].offset +=  BLOCK_SIZE - offset_bounced;
 		//update root dir size += the thing above writing past the file size
         howManyBlocksToRead--;
+		for(int i = 0; i < MAX_ROOT_FILES; i++){
+			if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
+				root_dir[i].fileSize += BLOCK_SIZE - offset_bounced;  		//update root dir filesize it would just be from offset to end of the block
+				break;
+			}
+		}
 
         // all inner blocks + that edge case
         for (int i = 1; i < howManyBlocksToRead; i++ ){
@@ -493,6 +502,12 @@ int fs_write(int fd, void *buf, size_t count)
                 fdTable.fdEntries[fd].offset += BLOCK_SIZE;
                 offset += BLOCK_SIZE;
                 totalBytesTransferred += BLOCK_SIZE;
+				for(int i = 0; i < MAX_ROOT_FILES; i++){
+					if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
+						root_dir[i].fileSize += BLOCK_SIZE;  		//update root dir filesize it would just be adding a block in terms of size each middle block.
+						break;
+				}
+			}
                 if (totalBytesTransferred == count){ // edge case
                     free(bounceBuffer);
                     return totalBytesTransferred; // this handles the case where the initial file offset is 3000 and i want to read 5192 bytes. so basically the last block i read is exactly 4096 bytes.
@@ -522,10 +537,16 @@ int fs_write(int fd, void *buf, size_t count)
                 fdTable.fdEntries[fd].offset += BLOCK_SIZE;
                 offset += BLOCK_SIZE;
                 totalBytesTransferred += BLOCK_SIZE;
+				for(int i = 0; i < MAX_ROOT_FILES; i++){
+					if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
+						root_dir[i].fileSize += ((initialOffset + count) % BLOCK_SIZE);  		//update root dir filesize it would just be adding whatever that is leftover in the block.
+						break;
+				}
                 free(bounceBuffer);
                 return totalBytesTransferred;
-        }
-    }
+        	}
+    	}
+	}
 	//Small Operation
 	if(offset_bounced + count <= BLOCK_SIZE){
 		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); // copies the WHOLE block in where the offset is at.
