@@ -68,7 +68,6 @@ int fs_mount(const char *diskname)
 
 	open_disk = block_disk_open(diskname);
 	if (open_disk == -1){
-		//printf("Disk cannot open"); // Error checking for when testing
 		return -1;
 	}
 
@@ -196,7 +195,6 @@ int fs_create(const char *filename)
 {
 
 	// Error Handling
-
 	if(filename == NULL || opened_vd == -1 || strlen(filename) > FS_FILENAME_LEN){
 		return -1;
 	}
@@ -223,9 +221,7 @@ int fs_create(const char *filename)
 			root_dir[i].fileSize = 0; // Setting size to 0
 			break;
 		}
-		
 	}
-
 	return 0;
 }
 
@@ -237,9 +233,7 @@ int fs_delete(const char *filename)
 	}
 
 		uint16_t fat_position = 9999;
-		// Empty for loop
-		// emptying root_dir array
-		//ask about memcmp vs ==
+
 		for (int i = 0; i < MAX_ROOT_FILES; i++){
 			// maybe have to use memcmp()
 			if(!memcmp(root_dir[i].fileName, filename, FS_FILENAME_LEN)){
@@ -252,7 +246,6 @@ int fs_delete(const char *filename)
 			}
 		}
      
-
 		// Free Fat Table contents
 		uint16_t next_position;
 

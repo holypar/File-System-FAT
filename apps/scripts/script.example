@@ -1,0 +1,6 @@
+MOUNT  
+CREATE	test
+OPEN	test
+WRITE	DATA	00000
+DELETE	test
+UMOUNT	test
