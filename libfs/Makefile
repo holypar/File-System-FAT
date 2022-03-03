@@ -6,7 +6,7 @@ target := libfs.a
 objs:= disk.o fs.o 
 # Flags
 CC  := gcc
-CFLAGS := -g -Wall -Wextra -MMD #-Werror 
+CFLAGS := -Wall -Wextra -Werror 
 AR  := ar rcs 
 
 # Debug Flag
