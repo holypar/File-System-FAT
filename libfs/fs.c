@@ -282,10 +282,7 @@ int fs_ls(void)
 	return 0; 
 }
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 7ebb52f7e5d6180bc40702fa40cb252e05a1aabb
 int fs_open(const char *filename)
 {
 	// Error Handling
@@ -380,10 +377,6 @@ uint16_t offset_helper(uint64_t offset, uint16_t firstDataBlockIndex){
 	return firstDataBlockIndex; 
 }
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 7ebb52f7e5d6180bc40702fa40cb252e05a1aabb
 int fs_write(int fd, void *buf, size_t count)
 {
 	// Error Handling
@@ -414,73 +407,74 @@ int fs_write(int fd, void *buf, size_t count)
 	int howManyBlocksToRead = ((offset_bounced + count) / BLOCK_SIZE) + 1;  //example 3000 block offset want to read 10000.  // 3 // 4 blocks for 3000 fof and 10000 read good
 	size_t totalBytesTransferred = 0;
 
-	//large operation
-	if (offset_bounced + count > BLOCK_SIZE){
-		//first block
-		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); 
-		memcpy(bounceBuffer + offset_bounced, buf, BLOCK_SIZE - offset_bounced);
-		block_write(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
-		totalBytesTransferred += BLOCK_SIZE - offset_bounced;
-		bufTracking += BLOCK_SIZE - offset_bounced;
-		offset +=  BLOCK_SIZE - offset_bounced;
-		fdTable.fdEntries[fd].offset +=  BLOCK_SIZE - offset_bounced;
-		howManyBlocksToRead--;
 
-		// all inner blocks + that edge case
-		for (int i = 1; i < howManyBlocksToRead; i++ ){
-			datablockindex = offset_helper(offset, indexReadFirstDataBlock);
-			if (fatTable[datablockindex] == FAT_EOC){
-				int new_index = -1;
-				for (int i = 0; i < super_block.fatBlocks; i++){
-					if (fatTable[i] == 0){
-						new_index = i; 
-						fatTable[datablockindex] = new_index;
-						fatTable[i] = FAT_EOC;
-						break;
-					}
-				}
-				if (new_index == -1){
-					return totalBytesTransferred; // No more bytes/space to be written
-				}
-				datablockindex = offset_helper(offset, indexReadFirstDataBlock);
-				block_write(datablockindex + super_block.dataBlockStartIndex, buf + bufTracking); // i can read these full blocks directly into the return buf
-				bufTracking += BLOCK_SIZE; //we read in 1 block each time
-				fdTable.fdEntries[fd].offset += BLOCK_SIZE;
-				offset += BLOCK_SIZE;
-				totalBytesTransferred += BLOCK_SIZE;
-				if (totalBytesTransferred == count){ // edge case
-					free(bounceBuffer);
-					return totalBytesTransferred; // this handles the case where the initial file offset is 3000 and i want to read 5192 bytes. so basically the last block i read is exactly 4096 bytes.
-				}
-				
-			}
-		}
-		datablockindex = offset_helper(offset, indexReadFirstDataBlock);
-			if (fatTable[datablockindex] == FAT_EOC){
-				int new_index = -1;
-				for (int i = 0; i < super_block.fatBlocks; i++){
-					if (fatTable[i] == 0){
-						new_index = i; 
-						fatTable[datablockindex] = new_index;
-						fatTable[i] = FAT_EOC;
-						break;
-					}
-				}
-				if (new_index == -1){
-					return totalBytesTransferred; // No more bytes/space to be written
-				}
-				datablockindex = offset_helper(offset, indexReadFirstDataBlock);
-				block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
-				memcpy(bounceBuffer, buf + bufTracking, ((initialOffset + count) % BLOCK_SIZE));
-				block_write(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);	
-				bufTracking += BLOCK_SIZE; //we read in 1 block each time
-				fdTable.fdEntries[fd].offset += BLOCK_SIZE;
-				offset += BLOCK_SIZE;
-				totalBytesTransferred += BLOCK_SIZE;
-				free(bounceBuffer);
-				return totalBytesTransferred;
-		}
-	}
+	//large operation
+    if (offset_bounced + count > BLOCK_SIZE){
+        //first block
+        block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); 
+        memcpy(bounceBuffer + offset_bounced, buf, BLOCK_SIZE - offset_bounced);
+        block_write(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
+        totalBytesTransferred += BLOCK_SIZE - offset_bounced;
+        bufTracking += BLOCK_SIZE - offset_bounced;
+        offset +=  BLOCK_SIZE - offset_bounced;
+        fdTable.fdEntries[fd].offset +=  BLOCK_SIZE - offset_bounced;
+        howManyBlocksToRead--;
+
+        // all inner blocks + that edge case
+        for (int i = 1; i < howManyBlocksToRead; i++ ){
+            datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+            if (fatTable[datablockindex] == FAT_EOC){
+                int new_index = -1;
+                for (int i = 0; i < super_block.fatBlocks; i++){
+                    if (fatTable[i] == 0){
+                        new_index = i; 
+                        fatTable[datablockindex] = new_index;
+                        fatTable[i] = FAT_EOC;
+                        break;
+                    }
+                }
+                if (new_index == -1){
+                    return totalBytesTransferred; // No more bytes/space to be written
+                }
+                datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+                block_write(datablockindex + super_block.dataBlockStartIndex, buf + bufTracking); // i can read these full blocks directly into the return buf
+                bufTracking += BLOCK_SIZE; //we read in 1 block each time
+                fdTable.fdEntries[fd].offset += BLOCK_SIZE;
+                offset += BLOCK_SIZE;
+                totalBytesTransferred += BLOCK_SIZE;
+                if (totalBytesTransferred == count){ // edge case
+                    free(bounceBuffer);
+                    return totalBytesTransferred; // this handles the case where the initial file offset is 3000 and i want to read 5192 bytes. so basically the last block i read is exactly 4096 bytes.
+                }
+
+            }
+        }
+        datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+            if (fatTable[datablockindex] == FAT_EOC){
+                int new_index = -1;
+                for (int i = 0; i < super_block.fatBlocks; i++){
+                    if (fatTable[i] == 0){
+                        new_index = i; 
+                        fatTable[datablockindex] = new_index;
+                        fatTable[i] = FAT_EOC;
+                        break;
+                    }
+                }
+                if (new_index == -1){
+                    return totalBytesTransferred; // No more bytes/space to be written
+                }
+                datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+                block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
+                memcpy(bounceBuffer, buf + bufTracking, ((initialOffset + count) % BLOCK_SIZE));
+                block_write(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
+                bufTracking += BLOCK_SIZE; //we read in 1 block each time
+                fdTable.fdEntries[fd].offset += BLOCK_SIZE;
+                offset += BLOCK_SIZE;
+                totalBytesTransferred += BLOCK_SIZE;
+                free(bounceBuffer);
+                return totalBytesTransferred;
+        }
+    }
 	//Small Operation
 	if(offset_bounced + count <= BLOCK_SIZE){
 		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); // copies the WHOLE block in where the offset is at.
