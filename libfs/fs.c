@@ -228,13 +228,6 @@ int fs_create(const char *filename)
 
 int fs_delete(const char *filename)
 {
-	/*
-		1) find file we are looking for
-		2) save that index access root_dir[index].indexoffirstdatablock
-		3) clear there in the fat table?
-	
-	*/
-        /* TODO: Phase 2 */
 	// Error Handling
 	if(filename == NULL || opened_vd == -1 || strlen(filename) > FS_FILENAME_LEN){
 		return -1;
@@ -285,18 +278,6 @@ int fs_ls(void)
 	}
 	return 0; 
 }
-
-
-
-/*
-	First check whether the file we want to open even exists in the root directory.
-	Then we check for the first available empty fd entry by checking if the filename is empty.
-	set offset to 0
-	change filename to given input
-	return the index of the for loop as the file descriptor.
-
-					*/
-
 
 int fs_open(const char *filename)
 {
@@ -401,15 +382,9 @@ uint16_t offset_helper(uint64_t offset, uint16_t firstDataBlockIndex){
 	return firstDataBlockIndex; 
 }
 
-//uint16_t fatblockAdder(){
-	//for(int i = 0; i < super_block.dataBlockStartIndex; i++){
-//
-	//}
-//}
 
 int fs_write(int fd, void *buf, size_t count)
 {
-    /* TODO: Phase 4 */
 	// Error Handling
 	if (buf == NULL){
 		return -1;
@@ -438,10 +413,8 @@ int fs_write(int fd, void *buf, size_t count)
 	int howManyBlocksToRead = ((offset_bounced + count) / BLOCK_SIZE) + 1;  //example 3000 block offset want to read 10000.  // 3 // 4 blocks for 3000 fof and 10000 read good
 	size_t totalBytesTransferred = 0;
 
-
 	//large operation
 	if (offset_bounced + count > BLOCK_SIZE){
-
 		//first block
 		block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); 
 		memcpy(bounceBuffer + offset_bounced, buf, BLOCK_SIZE - offset_bounced);
@@ -456,14 +429,17 @@ int fs_write(int fd, void *buf, size_t count)
 		for (int i = 1; i < howManyBlocksToRead; i++ ){
 			datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 			if (fatTable[datablockindex] == FAT_EOC){
-				//call  fatblockadder - cycle thru the fat table and look for the the first one that is 0
+				int new_index = -1;
 				for (int i = 0; i < super_block.fatBlocks; i++){
 					if (fatTable[i] == 0){
-						int new_index = i; 
+						new_index = i; 
 						fatTable[datablockindex] = new_index;
 						fatTable[i] = FAT_EOC;
 						break;
 					}
+				}
+				if (new_index == -1){
+					return totalBytesTransferred; // No more bytes/space to be written
 				}
 				datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 				block_write(datablockindex + super_block.dataBlockStartIndex, buf + bufTracking); // i can read these full blocks directly into the return buf
@@ -480,14 +456,17 @@ int fs_write(int fd, void *buf, size_t count)
 		}
 		datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 			if (fatTable[datablockindex] == FAT_EOC){
-				//call  fatblockadder - cycle thru the fat table and look for the the first one that is 0
+				int new_index = -1;
 				for (int i = 0; i < super_block.fatBlocks; i++){
 					if (fatTable[i] == 0){
-						int new_index = i; 
+						new_index = i; 
 						fatTable[datablockindex] = new_index;
 						fatTable[i] = FAT_EOC;
 						break;
 					}
+				}
+				if (new_index == -1){
+					return totalBytesTransferred; // No more bytes/space to be written
 				}
 				datablockindex = offset_helper(offset, indexReadFirstDataBlock);
 				block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
