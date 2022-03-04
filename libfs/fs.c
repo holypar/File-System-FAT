@@ -434,12 +434,13 @@ int fs_write(int fd, void *buf, size_t count)
 
 	size_t totalBytesTransferred = 0;
 
-	if(indexReadFirstDataBlock == FAT_EOC && count == 0){
-		return totalBytesTransferred;
-	}
+	
 	
 
 	if(indexReadFirstDataBlock == FAT_EOC){
+		if(count == 0){
+			return totalBytesTransferred;
+		}
 		int new_index = -1;
 		for (int i = 0; i < super_block.amountDataBlocks; i++)
 		{
