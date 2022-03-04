@@ -433,6 +433,10 @@ int fs_write(int fd, void *buf, size_t count)
 	int howManyBlocksToRead = ((offset_bounced + count) / BLOCK_SIZE) + 1;  //example 3000 block offset want to read 10000.  // 3 // 4 blocks for 3000 fof and 10000 read good
 
 	size_t totalBytesTransferred = 0;
+
+	if(indexReadFirstDataBlock == FAT_EOC && count == 0){
+		return totalBytesTransferred;
+	}
 	
 
 	if(indexReadFirstDataBlock == FAT_EOC){
@@ -460,10 +464,6 @@ int fs_write(int fd, void *buf, size_t count)
 			return totalBytesTransferred; //no space to write onto file.
 		}
 		
-	}
-
-	if(indexReadFirstDataBlock == FAT_EOC && count == 0){
-		return totalBytesTransferred;
 	}
 	
 	datablockindex = offset_helper(offset, indexReadFirstDataBlock);
