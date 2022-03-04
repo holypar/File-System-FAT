@@ -518,37 +518,42 @@ int fs_write(int fd, void *buf, size_t count)
 
             }
         }
-        datablockindex = offset_helper(offset, indexReadFirstDataBlock);
-            if (fatTable[datablockindex] == FAT_EOC){
-                int new_index = -1;
-                for (int i = 0; i < super_block.amountDataBlocks; i++){
-                    if (fatTable[i] == 0){
-                        new_index = i; 
-                        fatTable[datablockindex] = new_index;
-                        fatTable[i] = FAT_EOC;
-                        break;
-                    }
-                }
-                if (new_index == -1){
-                    return totalBytesTransferred; // No more bytes/space to be written
-                }
-                datablockindex = offset_helper(offset, indexReadFirstDataBlock);
-                block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
-                memcpy(bounceBuffer, buf + bufTracking, ((initialOffset + count) % BLOCK_SIZE));
-                block_write(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
-                bufTracking += BLOCK_SIZE; //we read in 1 block each time
-                fdTable.fdEntries[fd].offset += BLOCK_SIZE;
-                offset += BLOCK_SIZE;
-                totalBytesTransferred += BLOCK_SIZE;
-				for(int i = 0; i < MAX_ROOT_FILES; i++){
-					if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
-						root_dir[i].fileSize += ((initialOffset + count) % BLOCK_SIZE);  		//update root dir filesize it would just be adding whatever that is leftover in the block.
-						break;
+		//wrote the first block i still want to write check if im at eoc if i am i gotta extend to another darta block
+		if (fatTable[datablockindex] == FAT_EOC){
+			int new_index = -1;
+			for (int i = 0; i < super_block.amountDataBlocks; i++){
+				if (fatTable[i] == 0){
+					new_index = i; 
+					fatTable[datablockindex] = new_index;
+					fatTable[i] = FAT_EOC;
+					break;
 				}
-                free(bounceBuffer);
-                return totalBytesTransferred;
-        	}
-    	}
+			}
+			if (new_index == -1){
+				return totalBytesTransferred; // No more bytes/space to be written
+			}
+		}		
+		
+        datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+
+			datablockindex = offset_helper(offset, indexReadFirstDataBlock);
+			block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
+			memcpy(bounceBuffer, buf + bufTracking, ((initialOffset + count) % BLOCK_SIZE));
+			block_write(datablockindex + super_block.dataBlockStartIndex, bounceBuffer);
+			bufTracking += BLOCK_SIZE; //we read in 1 block each time
+			fdTable.fdEntries[fd].offset += BLOCK_SIZE;
+			offset += BLOCK_SIZE;
+			totalBytesTransferred += BLOCK_SIZE;
+			//changing file size
+			for(int i = 0; i < MAX_ROOT_FILES; i++){
+				if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
+					root_dir[i].fileSize += ((initialOffset + count) % BLOCK_SIZE);  		//update root dir filesize it would just be adding whatever that is leftover in the block.
+					break;
+				}
+			}
+			free(bounceBuffer);
+			return totalBytesTransferred;
+	
 	}
 	//Small Operation
 	if(offset_bounced + count <= BLOCK_SIZE){
@@ -605,7 +610,7 @@ int fs_read(int fd, void *buf, size_t count)
 	} 
 
 	// Larger/Bigger Operation
-		if (offset_bounced + count > BLOCK_SIZE){
+	if (offset_bounced + count > BLOCK_SIZE){
 			//copy over  from the location of first data block offset to the end of that block
 			block_read(datablockindex + super_block.dataBlockStartIndex, bounceBuffer); // read in WHOLE block into the bouncebuffer
 			memcpy(buf, bounceBuffer + offset_bounced, BLOCK_SIZE - offset_bounced);  // only import from offset to end of THAT block
