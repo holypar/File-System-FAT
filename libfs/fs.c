@@ -12,11 +12,6 @@
 #define MAX_ROOT_FILES 128
 #define MAX_FILE_NAME_SIZE 16
 
-// TO Do
-	// 1.) Comments
-	// 2.) Lookover for error Handling/edge cases
-	// 3.) Clean up any code
-
 // Superblock Struct
 struct __attribute__((packed)) superblock { 
 	uint8_t signature[8]; 
@@ -178,6 +173,7 @@ int fs_info(void)
 			freeFatEntry++;
 		}
 	}
+
 	// Returning SuperBlock Information about ECS150FS
 	printf("FS Info:\n");
 	printf("total_blk_count=%d\n", super_block.totalVirtualDiskBlocks);
@@ -249,6 +245,7 @@ int fs_delete(const char *filename)
 						return -1;
 					}
 				}
+
 			fat_position = root_dir[i].indexOfFirstDataBlock;
 			 // this is the spot we look for in our fatTable	
 			root_dir[i].fileName[0] = '\0'; // setting filename to NULL
@@ -331,7 +328,6 @@ int fs_open(const char *filename)
 	if (found == -1){
 		return -1;
 	}
-
 
 	return returnFD;
 }
