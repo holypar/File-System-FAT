@@ -241,10 +241,10 @@ int fs_delete(const char *filename)
 	uint16_t fat_position = 9999;
 	int found = -1;	//checks if the file the user wants to delete is in the root dir
 	for (int i = 0; i < MAX_ROOT_FILES; i++){
-		if(!memcmp(root_dir[i].fileName, filename, FS_FILENAME_LEN)){
+		if(strcmp((char*)root_dir[i].fileName, filename) == 0){
 			//we check for a matching name in the fdtable.fdentries and then change thats status
 			for(int i = 0; i < FS_OPEN_MAX_COUNT; i++){
-				if(memcmp(fdTable.fdEntries[i].fileName, filename, FS_FILENAME_LEN ) == 0){
+				if(strcmp((char*)fdTable.fdEntries[i].fileName, filename) == 0){
 					if(fdTable.fdEntries[i].status == 1){
 						return -1;
 					}
