@@ -457,9 +457,13 @@ int fs_write(int fd, void *buf, size_t count)
 		}
 
 		if(new_index == -1){
-		return totalBytesTransferred; //no space to write onto file.
-	}
+			return totalBytesTransferred; //no space to write onto file.
+		}
 		
+	}
+
+	if(indexReadFirstDataBlock == FAT_EOC && count == 0){
+		return totalBytesTransferred;
 	}
 	
 	datablockindex = offset_helper(offset, indexReadFirstDataBlock);
