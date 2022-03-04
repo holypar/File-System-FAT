@@ -438,12 +438,14 @@ int fs_write(int fd, void *buf, size_t count)
 	
 
 	if(indexReadFirstDataBlock == FAT_EOC){
-		if(count == 0){
-			return totalBytesTransferred;
-		}
+		
 		int new_index = -1;
 		for (int i = 0; i < super_block.amountDataBlocks; i++)
 		{
+			if(count  == 0){
+				break;
+			}
+
 			if(fatTable[i] == 0){
 				indexReadFirstDataBlock = i;
 				new_index = i;
@@ -454,9 +456,13 @@ int fs_write(int fd, void *buf, size_t count)
 				break;
 			}
 		}
+		
 		for(int i = 0; i < MAX_ROOT_FILES; i++){
 			if(strcmp((char*)root_dir[i].fileName, (char*)fdTable.fdEntries[fd].fileName) == 0){
 				root_dir[i].indexOfFirstDataBlock = new_index;  		//update root dir indexoffirstdatablock
+				if(count == 0){
+					root_dir[i].indexOfFirstDataBlock = FAT_EOC;		//if we arent writing anything yet, no need to allocate another block.
+				}
 				break;
 			}
 		}
